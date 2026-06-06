@@ -1,13 +1,14 @@
 package com.example.cariocada.model;
 
-import com.example.cariocada.repository.CompraRepository;
-import com.example.cariocada.repository.EstoqueRepository;
-import com.example.cariocada.repository.VendaRepository;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.example.cariocada.repository.CompraRepository;
+import com.example.cariocada.repository.EstoqueRepository;
+import com.example.cariocada.repository.VendaRepository;
 
 @Component
 public class Blackboard {
@@ -21,10 +22,9 @@ public class Blackboard {
     @Autowired
     private CompraRepository compraRepository;
 
-    // Listas voláteis apenas para alertas e logs em memória
+    // listas apenas pra alertas e logs em memória
     private final List<String> alertasEReposicoes = new ArrayList<>();
 
-    // 1. BUSCA DIRETAMENTE DO BANCO NEON (Evita que registros sumam da memória)
     public List<Estoque> getEstoqueLojas() {
         try {
             List<Estoque> lista = estoqueRepository.findAll();
