@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mercado Cariocada</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f4f6f8;
+    }
+
+    h1 {
+      color: #1f2937;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #00000020;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, select, button {
+      padding: 8px;
+      margin-top: 5px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Mercado Cariocada - Sistema Blackboard</h1>
+
+  <div class="card">
+    <h2>Registrar Venda</h2>
+
+    <label>Produto</label>
+    <select id="produtoSelect"></select>
+
+    <label>Loja</label>
+    <select id="lojaSelect"></select>
+
+    <label>Quantidade</label>
+    <input id="quantidade" type="number" value="3">
+
+    <button onclick="registrarVenda()">Registrar Venda</button>
+  </div>
+
+  <div class="card">
+    <h2>Estoques</h2>
+    <button onclick="carregarTudo()">Atualizar Dados</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Loja</th>
+          <th>Quantidade</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaEstoques"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Transferências</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Origem</th>
+          <th>Destino</th>
+          <th>Quantidade</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaTransferencias"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Ordens de Compra</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Loja</th>
+          <th>Fornecedor</th>
+          <th>Quantidade</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaOrdens"></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function carregarProdutos() {
+      const resposta = await fetch("/produtos");
+      const produtos = await resposta.json();
+
+      const select = document.getElementById("produtoSelect");
+      select.innerHTML = "";
+
+      produtos.forEach(produto => {
+        const option = document.createElement("option");
+        option.value = produto.id;
+        option.textContent = `${produto.nome} - ID ${produto.id}`;
+        select.appendChild(option);
+      });
+    }
+
+    async function carregarLojas() {
+      const resposta = await fetch("/lojas");
+      const lojas = await resposta.json();
+
+      const select = document.getElementById("lojaSelect");
+      select.innerHTML = "";
+
+      lojas.forEach(loja => {
+        const option = document.createElement("option");
+        option.value = loja.id;
+        option.textContent = loja.nome;
+        select.appendChild(option);
+      });
+    }
+
+    async function registrarVenda() {
+      const produtoId = document.getElementById("produtoSelect").value;
+      const lojaId = document.getElementById("lojaSelect").value;
+      const quantidade = document.getElementById("quantidade").value;
+
+      const resposta = await fetch(`/vendas?produtoId=${produtoId}&lojaId=${lojaId}&quantidade=${quantidade}`, {
+        method: "POST"
+      });
+
+      if (resposta.ok) {
+        alert("Venda registrada com sucesso!");
+        carregarTudo();
+      } else {
+        alert("Erro ao registrar venda.");
+      }
+    }
+
+    async function carregarEstoques() {
+      const resposta = await fetch("/estoques");
+      const estoques = await resposta.json();
+
+      const tabela = document.getElementById("tabelaEstoques");
+      tabela.innerHTML = "";
+
+      estoques.forEach(estoque => {
+        tabela.innerHTML += `
+          <tr>
+            <td>${estoque.produto.nome}</td>
+            <td>${estoque.loja.nome}</td>
+            <td>${estoque.quantidade}</td>
+          </tr>
+        `;
+      });
+    }
+
+    async function carregarTransferencias() {
+      const resposta = await fetch("/transferencias");
+      const transferencias = await resposta.json();
+
+      const tabela = document.getElementById("tabelaTransferencias");
+      tabela.innerHTML = "";
+
+      transferencias.forEach(t => {
+        tabela.innerHTML += `
+          <tr>
+            <td>${t.produto.nome}</td>
+            <td>${t.lojaOrigem.nome}</td>
+            <td>${t.lojaDestino.nome}</td>
+            <td>${t.quantidade}</td>
+          </tr>
+        `;
+      });
+    }
+
+    async function carregarOrdensCompra() {
+      const resposta = await fetch("/ordens-compra");
+      const ordens = await resposta.json();
+
+      const tabela = document.getElementById("tabelaOrdens");
+      tabela.innerHTML = "";
+
+      ordens.forEach(o => {
+        tabela.innerHTML += `
+          <tr>
+            <td>${o.produto.nome}</td>
+            <td>${o.loja.nome}</td>
+            <td>${o.fornecedor ? o.fornecedor.razaoSocial : "Sem fornecedor"}</td>
+            <td>${o.quantidade}</td>
+            <td>${o.status}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function carregarTudo() {
+      carregarProdutos();
+      carregarLojas();
+      carregarEstoques();
+      carregarTransferencias();
+      carregarOrdensCompra();
+    }
+
+    carregarTudo();
+  </script>
+</body>
+</html>
