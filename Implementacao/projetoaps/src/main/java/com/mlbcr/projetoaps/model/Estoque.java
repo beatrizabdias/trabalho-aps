@@ -26,6 +26,8 @@ public class Estoque {
     @ManyToOne
     private Loja loja;
 
+    private String estado;
+
     private Integer quantidade;
 }
 

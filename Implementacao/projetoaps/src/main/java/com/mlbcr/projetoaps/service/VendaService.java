@@ -14,6 +14,7 @@ import com.mlbcr.projetoaps.repository.ProdutoRepository;
 import com.mlbcr.projetoaps.repository.VendaRepository;
 
 import com.mlbcr.projetoaps.observer.ReposicaoObserver;
+import com.mlbcr.projetoaps.service.StateService;
 
 @Service
 public class VendaService {
@@ -23,15 +24,16 @@ public class VendaService {
     private final LojaRepository lojaRepository;
     //private final ReposicaoService reposicaoService;
     private final ReposicaoObserver reposicaoObserver;
-
+    private final StateService stateService;
 
     public VendaService(VendaRepository vendaRepository,EstoqueRepository estoqueRepository,
-        ProdutoRepository produtoRepository,LojaRepository lojaRepository, ReposicaoObserver reposicaoObserver) {
+        ProdutoRepository produtoRepository,LojaRepository lojaRepository, ReposicaoObserver reposicaoObserver, StateService stateService) {
         this.vendaRepository = vendaRepository;
         this.estoqueRepository = estoqueRepository;
         this.produtoRepository = produtoRepository;
         this.lojaRepository = lojaRepository;
         this.reposicaoObserver = reposicaoObserver;
+        this.stateService = stateService;
     }
 
     public Venda registrarVenda(
@@ -64,6 +66,11 @@ public class VendaService {
             estoque.getQuantidade() - quantidade
         );
         estoqueRepository.save(estoque);
+
+        stateService.atualizarEstado(
+            produto,
+            estoque
+        );
 
         Venda venda = new Venda();
 

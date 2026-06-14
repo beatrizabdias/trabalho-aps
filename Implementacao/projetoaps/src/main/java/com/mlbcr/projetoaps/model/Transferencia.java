@@ -31,5 +31,6 @@ public class Transferencia {
     private Loja lojaDestino;
 
     private Integer quantidade;
+    
     private LocalDateTime dataTransferencia;
 }

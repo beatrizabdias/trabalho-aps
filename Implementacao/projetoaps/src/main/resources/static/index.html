@@ -93,6 +93,7 @@
           <th>Produto</th>
           <th>Loja</th>
           <th>Quantidade</th>
+          <th>Estado</th>
         </tr>
       </thead>
       <tbody id="tabelaEstoques"></tbody>
@@ -108,6 +109,7 @@
           <th>Origem</th>
           <th>Destino</th>
           <th>Quantidade</th>
+          <th>Data/Hora</th>
         </tr>
       </thead>
       <tbody id="tabelaTransferencias"></tbody>
@@ -191,6 +193,17 @@
             <td>${estoque.produto.nome}</td>
             <td>${estoque.loja.nome}</td>
             <td>${estoque.quantidade}</td>
+
+            <td>
+              ${
+                estoque.estado === "NORMAL"
+                  ? "🟢 Normal"
+                  : estoque.estado === "ALERTA"
+                  ? "🟡 Alerta"
+                  : "🔴 Esgotado"
+              }
+            </td>
+            
           </tr>
         `;
       });
@@ -204,12 +217,24 @@
       tabela.innerHTML = "";
 
       transferencias.forEach(t => {
+
+      const data = new Date(t.dataTransferencia);
+
+      const dataFormatada = data.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
         tabela.innerHTML += `
           <tr>
             <td>${t.produto.nome}</td>
             <td>${t.lojaOrigem.nome}</td>
             <td>${t.lojaDestino.nome}</td>
             <td>${t.quantidade}</td>
+            <td>${dataFormatada}</td>
           </tr>
         `;
       });
