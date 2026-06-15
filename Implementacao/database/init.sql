@@ -77,7 +77,8 @@ VALUES (
 INSERT INTO estoques (
     produto_id,
     loja_id,
-    quantidade
+    quantidade,
+    estado
 )
 VALUES (
     1,

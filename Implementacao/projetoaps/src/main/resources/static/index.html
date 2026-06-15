@@ -3,272 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <title>Mercado Cariocada</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      background: #f4f6f8;
-    }
-
-    h1 {
-      color: #1f2937;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px #00000020;
-    }
-
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    input, select, button {
-      padding: 8px;
-      margin-top: 5px;
-      width: 100%;
-      max-width: 300px;
-    }
-
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 15px;
-    }
-
-    button:hover {
-      background: #1d4ed8;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-
-    th {
-      background: #e5e7eb;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <h1>Mercado Cariocada - Sistema Blackboard</h1>
+  <main class="container">
 
-  <div class="card">
-    <h2>Registrar Venda</h2>
+    <section id="loginCard" class="card login-card">
+      <h1>Mercado Cariocada</h1>
+      <p>Sistema Blackboard de Estoque</p>
 
-    <label>Produto</label>
-    <select id="produtoSelect"></select>
+      <label>E-mail do funcionário</label>
+      <input id="emailLogin" type="email" placeholder="exemplo@cariocada.com">
 
-    <label>Loja</label>
-    <select id="lojaSelect"></select>
+      <button onclick="fazerLogin()">Entrar</button>
+    </section>
 
-    <label>Quantidade</label>
-    <input id="quantidade" type="number" value="3">
+    <section id="sistema" style="display: none;">
+      <header class="topo">
+        <div>
+          <h1>Mercado Cariocada</h1>
+          <p id="usuarioInfo"></p>
+        </div>
+        <button class="botao-secundario" onclick="sair()">Sair</button>
+      </header>
 
-    <button onclick="registrarVenda()">Registrar Venda</button>
-  </div>
+      <div class="grid">
+        <section id="cardVenda" class="card">
+          <h2>Registrar Venda</h2>
 
-  <div class="card">
-    <h2>Estoques</h2>
-    <button onclick="carregarTudo()">Atualizar Dados</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Loja</th>
-          <th>Quantidade</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaEstoques"></tbody>
-    </table>
-  </div>
+          <label>Produto</label>
+          <select id="produtoSelect"></select>
 
-  <div class="card">
-    <h2>Transferências</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Origem</th>
-          <th>Destino</th>
-          <th>Quantidade</th>
-          <th>Data/Hora</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaTransferencias"></tbody>
-    </table>
-  </div>
+          <label>Loja</label>
+          <select id="lojaSelect"></select>
 
-  <div class="card">
-    <h2>Ordens de Compra</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Loja</th>
-          <th>Fornecedor</th>
-          <th>Quantidade</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaOrdens"></tbody>
-    </table>
-  </div>
+          <label>Quantidade</label>
+          <input id="quantidade" type="number" value="3">
 
-  <script>
-    async function carregarProdutos() {
-      const resposta = await fetch("/produtos");
-      const produtos = await resposta.json();
+          <button onclick="registrarVenda()">Registrar Venda</button>
+        </section>
 
-      const select = document.getElementById("produtoSelect");
-      select.innerHTML = "";
+        <section class="card">
+          <h2>Estoques</h2>
+          <button onclick="carregarTudo()">Atualizar Dados</button>
 
-      produtos.forEach(produto => {
-        const option = document.createElement("option");
-        option.value = produto.id;
-        option.textContent = `${produto.nome} - ID ${produto.id}`;
-        select.appendChild(option);
-      });
-    }
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Loja</th>
+                <th>Quantidade</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaEstoques"></tbody>
+          </table>
+        </section>
+      </div>
 
-    async function carregarLojas() {
-      const resposta = await fetch("/lojas");
-      const lojas = await resposta.json();
+      <section id="areaGerente">
+        <section class="card">
+          <h2>Transferências</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Quantidade</th>
+                <th>Data/Hora</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaTransferencias"></tbody>
+          </table>
+        </section>
 
-      const select = document.getElementById("lojaSelect");
-      select.innerHTML = "";
+        <section class="card">
+          <h2>Ordens de Compra</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Loja</th>
+                <th>Fornecedor</th>
+                <th>Quantidade</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaOrdens"></tbody>
+          </table>
+        </section>
+      </section>
 
-      lojas.forEach(loja => {
-        const option = document.createElement("option");
-        option.value = loja.id;
-        option.textContent = loja.nome;
-        select.appendChild(option);
-      });
-    }
+    </section>
+  </main>
 
-    async function registrarVenda() {
-      const produtoId = document.getElementById("produtoSelect").value;
-      const lojaId = document.getElementById("lojaSelect").value;
-      const quantidade = document.getElementById("quantidade").value;
-
-      const resposta = await fetch(`/vendas?produtoId=${produtoId}&lojaId=${lojaId}&quantidade=${quantidade}`, {
-        method: "POST"
-      });
-
-      if (resposta.ok) {
-        alert("Venda registrada com sucesso!");
-        carregarTudo();
-      } else {
-        alert("Erro ao registrar venda.");
-      }
-    }
-
-    async function carregarEstoques() {
-      const resposta = await fetch("/estoques");
-      const estoques = await resposta.json();
-
-      const tabela = document.getElementById("tabelaEstoques");
-      tabela.innerHTML = "";
-
-      estoques.forEach(estoque => {
-        tabela.innerHTML += `
-          <tr>
-            <td>${estoque.produto.nome}</td>
-            <td>${estoque.loja.nome}</td>
-            <td>${estoque.quantidade}</td>
-
-            <td>
-              ${
-                estoque.estado === "NORMAL"
-                  ? "🟢 Normal"
-                  : estoque.estado === "ALERTA"
-                  ? "🟡 Alerta"
-                  : "🔴 Esgotado"
-              }
-            </td>
-            
-          </tr>
-        `;
-      });
-    }
-
-    async function carregarTransferencias() {
-      const resposta = await fetch("/transferencias");
-      const transferencias = await resposta.json();
-
-      const tabela = document.getElementById("tabelaTransferencias");
-      tabela.innerHTML = "";
-
-      transferencias.forEach(t => {
-
-      const data = new Date(t.dataTransferencia);
-
-      const dataFormatada = data.toLocaleString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-
-        tabela.innerHTML += `
-          <tr>
-            <td>${t.produto.nome}</td>
-            <td>${t.lojaOrigem.nome}</td>
-            <td>${t.lojaDestino.nome}</td>
-            <td>${t.quantidade}</td>
-            <td>${dataFormatada}</td>
-          </tr>
-        `;
-      });
-    }
-
-    async function carregarOrdensCompra() {
-      const resposta = await fetch("/ordens-compra");
-      const ordens = await resposta.json();
-
-      const tabela = document.getElementById("tabelaOrdens");
-      tabela.innerHTML = "";
-
-      ordens.forEach(o => {
-        tabela.innerHTML += `
-          <tr>
-            <td>${o.produto.nome}</td>
-            <td>${o.loja.nome}</td>
-            <td>${o.fornecedor ? o.fornecedor.razaoSocial : "Sem fornecedor"}</td>
-            <td>${o.quantidade}</td>
-            <td>${o.status}</td>
-          </tr>
-        `;
-      });
-    }
-
-    function carregarTudo() {
-      carregarProdutos();
-      carregarLojas();
-      carregarEstoques();
-      carregarTransferencias();
-      carregarOrdensCompra();
-    }
-
-    carregarTudo();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>

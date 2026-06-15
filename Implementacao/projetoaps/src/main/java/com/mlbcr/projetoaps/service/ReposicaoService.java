@@ -1,6 +1,7 @@
 package com.mlbcr.projetoaps.service;
 
 import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,16 +10,14 @@ import com.mlbcr.projetoaps.model.Loja;
 import com.mlbcr.projetoaps.model.OrdemCompra;
 import com.mlbcr.projetoaps.model.Produto;
 import com.mlbcr.projetoaps.model.Transferencia;
+import com.mlbcr.projetoaps.observer.ReposicaoEvent;
+import com.mlbcr.projetoaps.observer.ReposicaoNotificar;
 import com.mlbcr.projetoaps.repository.EstoqueRepository;
 import com.mlbcr.projetoaps.repository.LojaRepository;
 import com.mlbcr.projetoaps.repository.OrdemCompraRepository;
 import com.mlbcr.projetoaps.repository.TransferenciaRepository;
-
 import com.mlbcr.projetoaps.strategy.CompraStrategy;
 import com.mlbcr.projetoaps.strategy.TransferenciaStrategy;
-
-import com.mlbcr.projetoaps.observer.ReposicaoNotificar;
-import com.mlbcr.projetoaps.observer.ReposicaoEvent;
 
 @Service
 public class ReposicaoService {
@@ -51,7 +50,7 @@ public class ReposicaoService {
         this.transferenciaStrategy = transferenciaStrategy;
         this.compraStrategy = compraStrategy;
         this.reposicaoAcaoNotifier = reposicaoAcaoNotifier;
-    } // <-- CORRIGIDO: Fechamento correto do construtor
+    } 
 
     private int obterLimiteMinimo(Loja loja) {
         if (loja != null && "Méier".equalsIgnoreCase(loja.getNome())) {
@@ -68,7 +67,7 @@ public class ReposicaoService {
         int limiteCritico = obterLimiteMinimo(loja);
         if (estoqueAtual.getQuantidade() >= limiteCritico) {
             return;
-        } // <-- CORRIGIDO: Apenas o bloco if termina aqui, permitindo que o método continue
+        }
 
         Loja outraLoja = lojaRepository.findAll()
                 .stream()
@@ -127,8 +126,25 @@ public class ReposicaoService {
 
         OrdemCompra ordemSalva = ordemCompraRepository.save(ordemCompra);
 
-        String descricao = String.format("Ordem de compra gerada automaticamente devido a baixo estoque na Loja ID %d. Qtd Solicitada: %d", loja.getId(), QTD_COMPRA);
-        
+        Estoque estoque = estoqueRepository
+            .findByProdutoAndLoja(produto, loja)
+            .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
+
+        estoque.setQuantidade(
+            estoque.getQuantidade() + QTD_COMPRA
+        );
+
+        estoqueRepository.save(estoque);
+
+        ordemSalva.setStatus("CONCLUIDA");
+        ordemCompraRepository.save(ordemSalva);
+
+        String descricao = String.format(
+            "Ordem de compra gerada e concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
+            loja.getId(),
+            QTD_COMPRA
+        );
+
         ReposicaoEvent event = new ReposicaoEvent(ordemSalva, descricao);
         reposicaoAcaoNotifier.notificar(event);
     }

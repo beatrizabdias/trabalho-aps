@@ -1,6 +1,7 @@
 package com.mlbcr.projetoaps.observer;
 
 import com.mlbcr.projetoaps.model.OrdemCompra;
+
 import lombok.Getter;
 
 @Getter
