@@ -1,5 +1,7 @@
 package com.mlbcr.projetoaps.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+
 
 @Getter
 @Setter
@@ -30,4 +33,14 @@ public abstract class Funcionario {
 
     @ManyToOne
     private Loja loja;
+
+    
+    @JsonProperty("tipo_funcionario")
+    public String getTipoFuncionario() {
+        // Pega o valor definido no @DiscriminatorValue das classes filhas
+        // automaticamente, sem precisar de if/else
+        jakarta.persistence.DiscriminatorValue dv = this.getClass().getAnnotation(jakarta.persistence.DiscriminatorValue.class);
+        return (dv != null) ? dv.value() : "DESCONHECIDO";
+    }
+
 }

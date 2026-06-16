@@ -29,14 +29,10 @@ async function fazerLogin() {
 
 function aplicarPermissoes() {
   const tipo = usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "";
-
   const areaGerente = document.getElementById("areaGerente");
 
-  if (tipo === "GERENTE") {
-    areaGerente.style.display = "block";
-  } else {
-    areaGerente.style.display = "none";
-  }
+  // Apenas garante a visibilidade inicial baseada no login
+  areaGerente.style.display = (tipo === "GERENTE") ? "block" : "none";
 }
 
 function sair() {
@@ -183,9 +179,22 @@ async function carregarOrdensCompra() {
 }
 
 function carregarTudo() {
+  // Dados comuns a todos
   carregarProdutos();
   carregarLojas();
   carregarEstoques();
-  carregarTransferencias();
-  carregarOrdensCompra();
+
+  // Verifica o tipo de usuário para carregar dados sensíveis
+  const tipo = usuarioLogado?.tipoFuncionario || usuarioLogado?.tipo_funcionario;
+  console.log(usuarioLogado);
+  
+  const areaGerente = document.getElementById("areaGerente");
+
+  if (tipo === "GERENTE") {
+    areaGerente.style.display = "block";
+    carregarTransferencias();
+    carregarOrdensCompra();
+  } else {
+    areaGerente.style.display = "none";
+  }
 }
