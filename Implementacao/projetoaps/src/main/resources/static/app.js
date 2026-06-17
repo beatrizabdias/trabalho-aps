@@ -1,5 +1,5 @@
 let usuarioLogado = null;
-let monitorReposicao = null;
+let reposicoesAtivas = new Map();
 
 async function fazerLogin() {
   const email = document.getElementById("emailLogin").value.trim();
@@ -107,8 +107,13 @@ async function registrarVenda() {
   const produtoId = document.getElementById("produtoSelect").value;
   const lojaId = document.getElementById("lojaSelect").value;
   const quantidade = document.getElementById("quantidade").value;
+  const produtoNome = document.querySelector(`#produtoSelect option[value="${produtoId}"]`)?.textContent || "Produto";
+  const lojaNome = document.querySelector(`#lojaSelect option[value="${lojaId}"]`)?.textContent || "Loja";
 
-  atualizarStatusReposicao("Analisando venda e possível reposição automática...", "processando");
+  atualizarStatusReposicao(
+    `Analisando ${produtoNome} na ${lojaNome} para reposição automática...`,
+    "processando"
+  );
 
   const resposta = await fetch(
     `/vendas?produtoId=${produtoId}&lojaId=${lojaId}&quantidade=${quantidade}`,
@@ -117,27 +122,34 @@ async function registrarVenda() {
 
   if (resposta.ok) {
     const retorno = await resposta.json();
+    const chave = criarChaveReposicao(produtoId, lojaId);
 
     if (retorno.tipoReposicao && retorno.tipoReposicao !== "SEM_ACAO") {
-      monitorReposicao = {
+      reposicoesAtivas.set(chave, {
         produtoId: Number(produtoId),
         lojaId: Number(lojaId),
+        produtoNome,
+        lojaNome,
         tipoReposicao: retorno.tipoReposicao,
         mensagem: retorno.detalheReposicao || retorno.mensagem,
-      };
+        status: "em_andamento",
+      });
 
       atualizarStatusReposicao(
-        `${retorno.mensagem} ${retorno.detalheReposicao || ""}`.trim(),
+        `${produtoNome} na ${lojaNome}: ${retorno.mensagem} ${retorno.detalheReposicao || ""}`.trim(),
         "analise"
       );
     } else {
-      monitorReposicao = null;
-      atualizarStatusReposicao(retorno.mensagem || "Venda registrada com sucesso.", "ok");
+      reposicoesAtivas.delete(chave);
+      atualizarStatusReposicao(
+        `${produtoNome} na ${lojaNome}: ${retorno.mensagem || "Venda registrada com sucesso."}`,
+        "ok"
+      );
     }
 
     await carregarTudo();
   } else {
-    atualizarStatusReposicao("Não foi possível registrar a venda.", "erro");
+    atualizarStatusReposicao(`Não foi possível registrar ${produtoNome} na ${lojaNome}.`, "erro");
     alert("Erro ao registrar venda.");
   }
 }
@@ -156,17 +168,20 @@ async function carregarEstoques() {
   tabela.innerHTML = "";
 
   estoques.forEach(estoque => {
+        const reposicao = obterStatusReposicaoLinha(estoque);
+
     tabela.innerHTML += `
       <tr>
         <td>${estoque.produto.nome}</td>
         <td>${estoque.loja.nome}</td>
         <td>${estoque.quantidade}</td>
         <td><span class="estado-badge ${getClasseEstado(estoque.estado)}">${formatarEstado(estoque.estado)}</span></td>
+            <td>${reposicao}</td>
       </tr>
     `;
   });
 
-  verificarConclusaoReposicao(estoques);
+      verificarConclusaoReposicao(estoques);
 }
 
 function formatarEstado(estado) {
@@ -205,37 +220,72 @@ function atualizarStatusReposicao(texto, tipo) {
   caixa.className = `status-reposicao status-${tipo}`;
 }
 
-function verificarConclusaoReposicao(estoques) {
-  if (!monitorReposicao) return;
+function criarChaveReposicao(produtoId, lojaId) {
+  return `${produtoId}:${lojaId}`;
+}
 
-  const estoqueAlvo = estoques.find(
-    estoque =>
-      estoque.produto?.id === monitorReposicao.produtoId &&
-      estoque.loja?.id === monitorReposicao.lojaId
-  );
+function obterStatusReposicaoLinha(estoque) {
+  const estadoNormalizado = normalizarTexto(estoque.estado);
+  const chave = criarChaveReposicao(estoque.produto?.id, estoque.loja?.id);
+  const reposicao = reposicoesAtivas.get(chave);
 
-  if (!estoqueAlvo) return;
+  if (reposicao) {
+    const acao = reposicao.tipoReposicao === "TRANSFERENCIA" ? "Transferência" : "Compra";
+    const destino = reposicao.tipoReposicao === "TRANSFERENCIA"
+      ? ` com origem em ${reposicao.mensagem?.includes("origem") ? "outra loja" : "estoque disponível"}`
+      : "";
 
-  const estadoAtual = formatarEstado(estoqueAlvo.estado);
-  const estadoNormalizado = (estoqueAlvo.estado || "")
+    return `<span class="reposicao-label reposicao-andamento">${acao} automática em andamento: ${estoque.produto.nome} / ${estoque.loja.nome}${destino}</span>`;
+  }
+
+  if (estadoNormalizado.includes("CRITICO")) {
+    return `<span class="reposicao-label reposicao-critica">Crítico: aguardando transferência ou compra para ${estoque.produto.nome} / ${estoque.loja.nome}</span>`;
+  }
+
+  if (estadoNormalizado.includes("ESGOTADO")) {
+    return `<span class="reposicao-label reposicao-esgotada">Esgotado: compra automática para ${estoque.produto.nome} / ${estoque.loja.nome}</span>`;
+  }
+
+  return `<span class="reposicao-label reposicao-ok">Sem reposição pendente</span>`;
+}
+
+function normalizarTexto(texto) {
+  return (texto || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
+}
 
-  if (estadoNormalizado.includes("CRITICO") || estadoNormalizado.includes("ESGOTADO")) {
-    atualizarStatusReposicao(
-      `Estoque ainda em ${estadoAtual}. A reposição automática está em andamento...`,
-      "analise"
+function verificarConclusaoReposicao(estoques) {
+  if (!reposicoesAtivas.size) return;
+
+  for (const [chave, reposicao] of reposicoesAtivas.entries()) {
+    const estoqueAlvo = estoques.find(
+      estoque =>
+        estoque.produto?.id === reposicao.produtoId &&
+        estoque.loja?.id === reposicao.lojaId
     );
-    return;
+
+    if (!estoqueAlvo) continue;
+
+    const estadoNormalizado = normalizarTexto(estoqueAlvo.estado);
+    const estadoAtual = formatarEstado(estoqueAlvo.estado);
+
+    if (estadoNormalizado.includes("CRITICO") || estadoNormalizado.includes("ESGOTADO")) {
+      reposicoesAtivas.set(chave, {
+        ...reposicao,
+        status: "em_andamento",
+      });
+      continue;
+    }
+
+    atualizarStatusReposicao(
+      `${reposicao.produtoNome} na ${reposicao.lojaNome}: reposição concluída automaticamente. Novo estado: ${estadoAtual}.`,
+      "ok"
+    );
+
+    reposicoesAtivas.delete(chave);
   }
-
-  atualizarStatusReposicao(
-    `Reposição concluída automaticamente. Novo estado: ${estadoAtual}.`,
-    "ok"
-  );
-
-  monitorReposicao = null;
 }
 
 function formatarData(data) {
