@@ -126,18 +126,7 @@ public class ReposicaoService {
 
         OrdemCompra ordemSalva = ordemCompraRepository.save(ordemCompra);
 
-        Estoque estoque = estoqueRepository
-            .findByProdutoAndLoja(produto, loja)
-            .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
-
-        estoque.setQuantidade(
-            estoque.getQuantidade() + QTD_COMPRA
-        );
-
-        estoqueRepository.save(estoque);
-
-        ordemSalva.setStatus("CONCLUIDA");
-        ordemCompraRepository.save(ordemSalva);
+        new Thread(() -> processarCompra(ordemSalva.getId())).start();
 
         String descricao = String.format(
             "Ordem de compra gerada e concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
@@ -147,5 +136,37 @@ public class ReposicaoService {
 
         ReposicaoEvent event = new ReposicaoEvent(ordemSalva, descricao);
         reposicaoAcaoNotifier.notificar(event);
+    }
+
+    private void processarCompra(Long ordemId) {
+        try {
+
+            Thread.sleep(3000);
+
+            OrdemCompra ordem = ordemCompraRepository.findById(ordemId)
+                    .orElseThrow();
+
+            ordem.setStatus("EM_PROCESSAMENTO");
+            ordemCompraRepository.save(ordem);
+
+            Thread.sleep(3000);
+
+            Estoque estoque = estoqueRepository
+                    .findByProdutoAndLoja(
+                            ordem.getProduto(),
+                            ordem.getLoja())
+                    .orElseThrow();
+
+            estoque.setQuantidade(
+                    estoque.getQuantidade() + ordem.getQuantidade());
+
+            estoqueRepository.save(estoque);
+
+            ordem.setStatus("CONCLUIDA");
+            ordemCompraRepository.save(ordem);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

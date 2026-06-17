@@ -30,19 +30,19 @@ INSERT INTO funcionarios (nome, email, tipo_funcionario, loja_id) VALUES
 ('ADMINISTRADOR', 'admin@cariocada.com', 'ADMIN', NULL);
 
 INSERT INTO estoques (produto_id, loja_id, quantidade, estado) VALUES
-(1, 1, 11, 'DISPONÍVEL'),
+(1, 1, 11, 'NORMAL'),
 (2, 1, 5, 'ALERTA'),
-(3, 1, 25, 'DISPONÍVEL'),
-(4, 1, 15, 'DISPONÍVEL'),
+(3, 1, 25, 'NORMAL'),
+(4, 1, 15, 'NORMAL'),
 (5, 1, 8, 'ALERTA'),
-(6, 1, 20, 'DISPONÍVEL'),
-(7, 1, 30, 'DISPONÍVEL'),
+(6, 1, 20, 'NORMAL'),
+(7, 1, 30, 'NORMAL'),
 (8, 1, 7, 'ALERTA'),
-(1, 2, 40, 'DISPONÍVEL'),
-(2, 2, 18, 'DISPONÍVEL'),
-(3, 2, 12, 'DISPONÍVEL'),
-(4, 2, 35, 'DISPONÍVEL'),
+(1, 2, 40, 'NORMAL'),
+(2, 2, 18, 'NORMAL'),
+(3, 2, 12, 'NORMAL'),
+(4, 2, 35, 'NORMAL'),
 (5, 2, 4, 'ALERTA'),
-(6, 2, 28, 'DISPONÍVEL'),
-(9, 2, 14, 'DISPONÍVEL'),
-(10, 2, 9, 'DISPONÍVEL');
+(6, 2, 28, 'NORMAL'),
+(9, 2, 14, 'NORMAL'),
+(10, 2, 9, 'NORMAL');

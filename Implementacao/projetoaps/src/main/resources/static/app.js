@@ -21,15 +21,21 @@ async function fazerLogin() {
   document.getElementById("sistema").style.display = "block";
 
   if (usuarioLogado.tipoFuncionario === 'ADMIN') {
-    usuarioInfo.textContent =
-    `${usuario.nome} | ADMIN | Acesso Global`;
-  }
+  document.getElementById("usuarioInfo").textContent =
+    `${usuarioLogado.nome} | ADMIN | Acesso Global`;
+}
 
   document.getElementById("usuarioInfo").textContent =
     `${usuarioLogado.nome} | ${usuarioLogado.email} | ${usuarioLogado.loja?.nome ?? "Sem loja"}`;
 
   aplicarPermissoes();
-  carregarTudo();
+  await carregarTudo();
+
+  setInterval(() => {
+    if (usuarioLogado) {
+      carregarTudo();
+    }
+  }, 2000);
 }
 
 function aplicarPermissoes() {
@@ -95,7 +101,7 @@ async function registrarVenda() {
 
   if (resposta.ok) {
     alert("Venda registrada com sucesso!");
-    carregarTudo();
+    await carregarTudo();
   } else {
     alert("Erro ao registrar venda.");
   }
@@ -127,7 +133,7 @@ async function carregarEstoques() {
 }
 
 function formatarEstado(estado) {
-  if (estado === "DISPONÍVEL") return "🟢 Disponível";
+  if (estado === "NORMAL") return "🟢 Normal";
   if (estado === "ALERTA") return "🟡 Alerta";
   if (estado === "ESGOTADO") return "🔴 Esgotado";
   return "-";
@@ -162,8 +168,7 @@ async function carregarTransferencias() {
     tabela.innerHTML += `
       <tr>
         <td>${t.produto.nome}</td>
-        <td>${t.lojaOrigem.nome}</td>
-        <td>${t.lojaDestino.nome}</td>
+        <td>${t.lojaOrigem.nome} -> ${t.lojaDestino.nome}</td>
         <td>${t.quantidade}</td>
         <td>${dataFormatada}</td>
       </tr>
@@ -198,7 +203,7 @@ async function carregarOrdensCompra() {
   });
 }
 
-function carregarTudo() {
+async function carregarTudo() {
   // Dados comuns a todos
   carregarProdutos();
   carregarLojas();
@@ -212,8 +217,8 @@ function carregarTudo() {
 
   if (tipo === "GERENTE" || tipo === "ADMIN") {
     areaGerente.style.display = "block";
-    carregarTransferencias();
-    carregarOrdensCompra();
+    await carregarTransferencias();
+    await carregarOrdensCompra();
   } else {
     areaGerente.style.display = "none";
   }
