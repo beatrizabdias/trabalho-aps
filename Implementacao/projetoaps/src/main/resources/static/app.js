@@ -1,5 +1,6 @@
 let usuarioLogado = null;
 let reposicoesAtivas = new Map();
+let comprasManuaisAtivas = new Map();
 let timerMensagemReposicao = null;
 let timerMensagemCompraManual = null;
 
@@ -222,7 +223,19 @@ async function solicitarCompra() {
   );
 
   if (resposta.ok) {
+    const chave = criarChaveReposicao(produtoId, lojaId);
+    
+    comprasManuaisAtivas.set(chave, {
+      produtoId: Number(produtoId),
+      lojaId: Number(lojaId),
+      produtoNome,
+      lojaNome,
+      status: "em_andamento",
+      timerId: null,
+    });
+    
     atualizarStatusCompra(`Compra manual de ${produtoNome} para ${lojaNome} solicitada com sucesso.`, "ok");
+    agendarLimpezaCompraManual(chave);
     await carregarTudo();
   } else {
     const erro = await resposta.text();
@@ -287,7 +300,7 @@ async function carregarEstoques() {
   tabela.innerHTML = "";
 
   estoques.forEach(estoque => {
-        const reposicao = obterStatusReposicaoLinha(estoque);
+    const reposicao = obterStatusReposicaoLinha(estoque);
 
     tabela.innerHTML += `
       <tr>
@@ -295,12 +308,12 @@ async function carregarEstoques() {
         <td>${estoque.loja.nome}</td>
         <td>${estoque.quantidade}</td>
         <td><span class="estado-badge ${getClasseEstado(estoque.estado)}">${formatarEstado(estoque.estado)}</span></td>
-            <td>${reposicao}</td>
+        <td>${reposicao}</td>
       </tr>
     `;
   });
 
-      verificarConclusaoReposicao(estoques);
+  verificarConclusaoReposicao(estoques);
 }
 
 function formatarEstado(estado) {
@@ -363,29 +376,36 @@ function obterStatusReposicaoLinha(estoque) {
   const estadoNormalizado = normalizarTexto(estoque.estado);
   const chave = criarChaveReposicao(estoque.produto?.id, estoque.loja?.id);
   const reposicao = reposicoesAtivas.get(chave);
+  const compraManual = comprasManuaisAtivas.get(chave);
+
+  // Verificar se há compra manual em andamento
+  if (compraManual) {
+    if (compraManual.status === "em_andamento") {
+      return `<span class="reposicao-badge reposicao-andamento">📋 Compra manual solicitada</span>`;
+    }
+    if (compraManual.status === "concluida") {
+      return `<span class="reposicao-badge reposicao-finalizada">✅ Compra manual concluída</span>`;
+    }
+  }
 
   if (reposicao) {
     if (reposicao.status === "concluida") {
-      return `<span class="reposicao-label reposicao-finalizada">${reposicao.textoConclusao || `Reposição concluída para ${estoque.produto.nome} / ${estoque.loja.nome}`}</span>`;
+      return `<span class="reposicao-badge reposicao-finalizada">✅ Concluída</span>`;
     }
 
     const acao = reposicao.tipoReposicao === "TRANSFERENCIA" ? "Transferência" : "Compra";
-    const destino = reposicao.tipoReposicao === "TRANSFERENCIA"
-      ? ` com origem em ${reposicao.mensagem?.includes("origem") ? "outra loja" : "estoque disponível"}`
-      : "";
-
-    return `<span class="reposicao-label reposicao-andamento">${acao} automática em andamento: ${estoque.produto.nome} / ${estoque.loja.nome}${destino}</span>`;
+    return `<span class="reposicao-badge reposicao-andamento">🚚 ${acao} automática</span>`;
   }
 
   if (estadoNormalizado.includes("CRITICO")) {
-    return `<span class="reposicao-label reposicao-critica">Crítico: aguardando transferência ou compra</span>`;
+    return `<span class="reposicao-badge reposicao-critica">⚠️ Aguardando ação</span>`;
   }
 
   if (estadoNormalizado.includes("ESGOTADO")) {
-    return `<span class="reposicao-label reposicao-esgotada">Esgotado: compra automática para ${estoque.produto.nome} / ${estoque.loja.nome}</span>`;
+    return `<span class="reposicao-badge reposicao-esgotada">🚨 Compra automática</span>`;
   }
 
-  return `<span class="reposicao-label reposicao-ok">Sem reposição pendente</span>`;
+  return `<span class="reposicao-badge reposicao-ok">Sem pendências</span>`;
 }
 
 function normalizarTexto(texto) {
@@ -459,6 +479,35 @@ function agendarLimpezaReposicao(chave) {
   if (reposicaoAtual) {
     reposicoesAtivas.set(chave, {
       ...reposicaoAtual,
+      timerId,
+    });
+  }
+}
+
+function limparTimerCompraManual(chave) {
+  const compra = comprasManuaisAtivas.get(chave);
+
+  if (compra?.timerId) {
+    clearTimeout(compra.timerId);
+  }
+}
+
+function agendarLimpezaCompraManual(chave) {
+  limparTimerCompraManual(chave);
+
+  const timerId = setTimeout(() => {
+    comprasManuaisAtivas.delete(chave);
+
+    if (usuarioLogado) {
+      carregarDadosDinamicos();
+    }
+  }, 7000);
+
+  const compraAtual = comprasManuaisAtivas.get(chave);
+
+  if (compraAtual) {
+    comprasManuaisAtivas.set(chave, {
+      ...compraAtual,
       timerId,
     });
   }
@@ -546,7 +595,6 @@ async function carregarTudo() {
 
   // Verifica o tipo de usuário para carregar dados sensíveis
   const tipo = usuarioLogado?.tipoFuncionario || usuarioLogado?.tipo_funcionario;
-  console.log(usuarioLogado);
 
   const areaGestao = document.getElementById("areaGestao");
 

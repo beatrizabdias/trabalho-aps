@@ -155,38 +155,41 @@ button:active {
   transform: scale(0.98);
 }
 
-.reposicao-label {
-  display: inline-block;
-  padding: 6px 10px;
+.reposicao-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.8rem;
   line-height: 1.2;
+  text-align: center;
 }
 
-.reposicao-andamento {
-  background: #eff6ff;
-  color: #1d4ed8;
+/* Cores variantes baseadas no status que o app.js injetar */
+.reposicao-ok, 
+.reposicao-pendente { 
+  background: #f1f5f9; 
+  color: #475569; 
 }
 
-.reposicao-critica {
-  background: #fff7ed;
-  color: #9a3412;
+.reposicao-andamento, 
+.reposicao-processando { 
+  background: #eff6ff; 
+  color: #1d4ed8; 
 }
 
-.reposicao-esgotada {
-  background: #fef2f2;
-  color: #b91c1c;
+.reposicao-critica, 
+.reposicao-alerta { 
+  background: #fff7ed; 
+  color: #c2410c; 
 }
 
-.reposicao-ok {
-  background: #f8fafc;
-  color: #475569;
-}
-
-.reposicao-finalizada {
-  background: #ecfeff;
-  color: #155e75;
+.reposicao-esgotada, 
+.reposicao-erro { 
+  background: #fef2f2; 
+  color: #b91c1c; 
 }
 
 .botao-secundario {

@@ -39,6 +39,7 @@ public class OrdemCompraService {
 
     @Transactional
     public OrdemCompra receberCompra(Long ordemId) {
+        System.out.println("ENTREI NO RECEBER COMPRA");
 
         OrdemCompra ordemCompra = ordemCompraRepository.findById(ordemId)
                 .orElseThrow(() -> new RuntimeException("Ordem de compra não encontrada"));
@@ -52,7 +53,21 @@ public class OrdemCompraService {
                         ordemCompra.getProduto(),
                         ordemCompra.getLoja()
                 )
-                .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
+                .orElseGet(() -> {
+                        System.out.println("CRIANDO NOVO ESTOQUE");
+
+                        Estoque novoEstoque = new Estoque();
+
+                        novoEstoque.setProduto(
+                                ordemCompra.getProduto());
+
+                        novoEstoque.setLoja(
+                                ordemCompra.getLoja());
+
+                        novoEstoque.setQuantidade(0);
+
+                        return novoEstoque;
+                });
 
         estoque.setQuantidade(
                 estoque.getQuantidade() + ordemCompra.getQuantidade()
@@ -97,9 +112,15 @@ public class OrdemCompraService {
         new Thread(() -> {
         try {
 
+                System.out.println("THREAD INICIADA");
+
                 Thread.sleep(5000);
 
+                System.out.println("VOU CHAMAR RECEBER COMPRA");
+
                 receberCompra(ordemSalva.getId());
+
+                System.out.println("RECEBER COMPRA TERMINOU");
 
         } catch (Exception e) {
                 e.printStackTrace();
