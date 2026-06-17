@@ -20,6 +20,11 @@ async function fazerLogin() {
   document.getElementById("loginCard").style.display = "none";
   document.getElementById("sistema").style.display = "block";
 
+  if (usuarioLogado.tipoFuncionario === 'ADMIN') {
+    usuarioInfo.textContent =
+    `${usuario.nome} | ADMIN | Acesso Global`;
+  }
+
   document.getElementById("usuarioInfo").textContent =
     `${usuarioLogado.nome} | ${usuarioLogado.email} | ${usuarioLogado.loja?.nome ?? "Sem loja"}`;
 
@@ -128,6 +133,20 @@ function formatarEstado(estado) {
   return "-";
 }
 
+function formatarData(data) {
+    const d = new Date(data);
+
+    return d.toLocaleDateString("pt-BR")
+        + " "
+        + d.toLocaleTimeString(
+            "pt-BR",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+}
+
 async function carregarTransferencias() {
   const resposta = await fetch("/transferencias");
   const transferencias = await resposta.json();
@@ -138,13 +157,7 @@ async function carregarTransferencias() {
   transferencias.forEach(t => {
     const data = new Date(t.dataTransferencia);
 
-    const dataFormatada = data.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    const dataFormatada = formatarData(data);
 
     tabela.innerHTML += `
       <tr>
@@ -161,11 +174,17 @@ async function carregarTransferencias() {
 async function carregarOrdensCompra() {
   const resposta = await fetch("/ordens-compra");
   const ordens = await resposta.json();
+  console.log(ordens);
 
   const tabela = document.getElementById("tabelaOrdens");
   tabela.innerHTML = "";
 
   ordens.forEach(o => {
+    const data = new Date(o.dataCriacao);
+    console.log(data)
+    const dataFormatada = formatarData(data);
+    console.log(dataFormatada)
+
     tabela.innerHTML += `
       <tr>
         <td>${o.produto.nome}</td>
@@ -173,6 +192,7 @@ async function carregarOrdensCompra() {
         <td>${o.fornecedor ? o.fornecedor.razaoSocial : "Sem fornecedor"}</td>
         <td>${o.quantidade}</td>
         <td>${o.status}</td>
+        <td>${dataFormatada}</td>
       </tr>
     `;
   });

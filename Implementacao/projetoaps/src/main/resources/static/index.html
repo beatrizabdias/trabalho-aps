@@ -1,104 +1,105 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Mercado Cariocada</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>Mercado Cariocada</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
 
-<body>
-  <main class="container">
+  <body>
+    <main class="container">
 
-    <section id="loginCard" class="card login-card">
-      <h1>Mercado Cariocada</h1>
-      <p>Sistema Blackboard de Estoque</p>
+      <section id="loginCard" class="card login-card">
+        <h1>Mercado Cariocada</h1>
+        <p>Sistema Blackboard de Estoque</p>
 
-      <label>E-mail do funcionário</label>
-      <input id="emailLogin" type="email" placeholder="exemplo@cariocada.com">
+        <label>E-mail do funcionário</label>
+        <input id="emailLogin" type="email" placeholder="exemplo@cariocada.com">
 
-      <button onclick="fazerLogin()">Entrar</button>
-    </section>
-
-    <section id="sistema" style="display: none;">
-      <header class="topo">
-        <div>
-          <h1>Mercado Cariocada</h1>
-          <p id="usuarioInfo"></p>
-        </div>
-        <button class="botao-secundario" onclick="sair()">Sair</button>
-      </header>
-
-      <div class="grid">
-        <section id="cardVenda" class="card">
-          <h2>Registrar Venda</h2>
-
-          <label>Produto</label>
-          <select id="produtoSelect"></select>
-
-          <label>Loja</label>
-          <select id="lojaSelect"></select>
-
-          <label>Quantidade</label>
-          <input id="quantidade" type="number" value="3">
-
-          <button onclick="registrarVenda()">Registrar Venda</button>
-        </section>
-
-        <section class="card">
-          <h2>Estoques</h2>
-          <button onclick="carregarTudo()">Atualizar Dados</button>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Loja</th>
-                <th>Quantidade</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaEstoques"></tbody>
-          </table>
-        </section>
-      </div>
-
-      <section id="areaGerente">
-        <section class="card">
-          <h2>Transferências</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Origem</th>
-                <th>Destino</th>
-                <th>Quantidade</th>
-                <th>Data/Hora</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaTransferencias"></tbody>
-          </table>
-        </section>
-
-        <section class="card">
-          <h2>Ordens de Compra</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Loja</th>
-                <th>Fornecedor</th>
-                <th>Quantidade</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaOrdens"></tbody>
-          </table>
-        </section>
+        <button onclick="fazerLogin()">Entrar</button>
       </section>
 
-    </section>
-  </main>
+      <section id="sistema" style="display: none;">
+        <header class="topo">
+          <div>
+            <h1>Mercado Cariocada</h1>
+            <p id="usuarioInfo"></p>
+          </div>
+          <button class="botao-secundario" onclick="sair()">Sair</button>
+        </header>
 
-  <script src="app.js"></script>
-</body>
-</html>
+        <div class="grid">
+          <section id="cardVenda" class="card">
+            <h2>Registrar Venda</h2>
+
+            <label>Produto</label>
+            <select id="produtoSelect"></select>
+
+            <label>Loja</label>
+            <select id="lojaSelect"></select>
+
+            <label>Quantidade</label>
+            <input id="quantidade" type="number" value="3">
+
+            <button onclick="registrarVenda()">Registrar Venda</button>
+          </section>
+
+          <section class="card">
+            <h2>Estoques</h2>
+            <button onclick="carregarTudo()">Atualizar Dados</button>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Loja</th>
+                  <th>Quantidade</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaEstoques"></tbody>
+            </table>
+          </section>
+        </div>
+
+        <section id="areaGerente">
+          <section class="card">
+            <h2>Transferências</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Origem</th>
+                  <th>Destino</th>
+                  <th>Quantidade</th>
+                  <th>Data/Hora</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaTransferencias"></tbody>
+            </table>
+          </section>
+
+          <section class="card">
+            <h2>Ordens de Compra</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Loja</th>
+                  <th>Fornecedor</th>
+                  <th>Quantidade</th>
+                  <th>Status</th>
+                  <th>Data/Hora</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaOrdens"></tbody>
+            </table>
+          </section>
+        </section>
+
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
