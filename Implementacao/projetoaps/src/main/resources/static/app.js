@@ -631,3 +631,184 @@ async function carregarDadosDinamicos() {
         await carregarOrdensCompra();
     }
 }
+
+function baixarArquivo(nomeArquivo, conteudo) {
+  const blob = new Blob([conteudo], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function gerarRelatorioTransferencias() {
+  const resposta = await fetch("/transferencias");
+  let transferencias = await resposta.json();
+
+  const tipo = (usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "").toUpperCase().trim();
+
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    transferencias = transferencias.filter(
+      t => t.lojaOrigem.id === usuarioLogado.loja.id || t.lojaDestino.id === usuarioLogado.loja.id
+    );
+  }
+
+  let totalItens = 0;
+  const produtos = {};
+
+  transferencias.forEach(t => {
+    totalItens += t.quantidade;
+    if (!produtos[t.produto.nome]) {
+      produtos[t.produto.nome] = 0;
+    }
+    produtos[t.produto.nome] += t.quantidade;
+  });
+
+  let produtoMaisTransferido = "Nenhum";
+  let maiorQuantidade = 0;
+
+  for (const produto in produtos) {
+    if (produtos[produto] > maiorQuantidade) {
+      maiorQuantidade = produtos[produto];
+      produtoMaisTransferido = produto;
+    }
+  }
+
+  let texto = `==========================================================
+MERCADO CARIOCADA
+RELATÓRIO DE TRANSFERÊNCIAS
+==========================================================
+
+Data de Geração: ${new Date().toLocaleString("pt-BR")}
+Gerado por: ${usuarioLogado.nome}
+Perfil: ${tipo}
+Loja: ${usuarioLogado.loja?.nome || "Todas"}
+
+----------------------------------------------------------
+Total de Transferências: ${transferencias.length}
+Total de Itens Movimentados: ${totalItens}
+Produto Mais Transferido: ${produtoMaisTransferido}
+Quantidade Movimentada: ${maiorQuantidade}
+
+==========================================================
+DETALHAMENTO
+==========================================================\n`;
+
+  transferencias.forEach(t => {
+    texto += `
+Produto: ${t.produto.nome}
+Origem: ${t.lojaOrigem.nome}
+Destino: ${t.lojaDestino.nome}
+Quantidade: ${t.quantidade}
+Data: ${formatarData(t.dataTransferencia)}
+----------------------------------------------------------\n`;
+  });
+
+  gerarPDF("Relatorio_Transferencias.pdf", texto);
+}
+
+async function gerarRelatorioCompras() {
+  const resposta = await fetch("/ordens-compra");
+  let ordens = await resposta.json();
+
+  const tipo = (usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "").toUpperCase().trim();
+
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    ordens = ordens.filter(o => o.loja.id === usuarioLogado.loja.id);
+  }
+
+  let totalItens = 0;
+  let valorTotal = 0;
+  const fornecedores = {};
+  const produtos = {};
+
+  ordens.forEach(o => {
+    totalItens += o.quantidade;
+    if (o.produto.valorCompra) {
+      valorTotal += o.quantidade * o.produto.valorCompra;
+    }
+    if (o.fornecedor) {
+      if (!fornecedores[o.fornecedor.razaoSocial]) {
+        fornecedores[o.fornecedor.razaoSocial] = 0;
+      }
+      fornecedores[o.fornecedor.razaoSocial] += o.quantidade;
+    }
+    if (!produtos[o.produto.nome]) {
+      produtos[o.produto.nome] = 0;
+    }
+    produtos[o.produto.nome] += o.quantidade;
+  });
+
+  let texto = `==========================================================
+MERCADO CARIOCADA
+RELATÓRIO DE ORDENS DE COMPRA
+==========================================================
+
+Data de Geração: ${new Date().toLocaleString("pt-BR")}
+Gerado por: ${usuarioLogado.nome}
+Perfil: ${tipo}
+Loja: ${usuarioLogado.loja?.nome || "Todas"}
+
+----------------------------------------------------------
+Total de Ordens: ${ordens.length}
+Quantidade Total Comprada: ${totalItens}
+Valor Estimado Comprado: R$ ${valorTotal.toFixed(2)}
+
+==========================================================
+FORNECEDORES
+==========================================================\n`;
+
+  for (const fornecedor in fornecedores) {
+    texto += `${fornecedor}\nQuantidade Fornecida: ${fornecedores[fornecedor]}\n\n`;
+  }
+
+  texto += `==========================================================
+DETALHAMENTO DAS ORDENS
+==========================================================\n`;
+
+  ordens.forEach(o => {
+    texto += `
+Produto: ${o.produto.nome}
+Fornecedor: ${o.fornecedor ? o.fornecedor.razaoSocial : "Não informado"}
+Quantidade: ${o.quantidade}
+Valor Unitário: R$ ${o.produto.valorCompra || 0}
+Valor Total: R$ ${(o.quantidade * (o.produto.valorCompra || 0)).toFixed(2)}
+Status: ${o.status}
+Loja: ${o.loja.nome}
+Data: ${formatarData(o.dataCriacao)}
+----------------------------------------------------------\n`;
+  });
+
+  gerarPDF("Relatorio_Compras.pdf", texto);
+}
+
+// ==========================================================================
+// FUNÇÃO GERAR PDF CORRIGIDA (Com quebra automática de páginas)
+// ==========================================================================
+function gerarPDF(nomeArquivo, texto) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(10);
+
+  // Divide o texto gigante em linhas aceitáveis para a largura da página A4
+  const linhas = doc.splitTextToSize(texto, 180);
+  
+  let y = 15; // Margem superior inicial
+  const margemInferiorMax = 280; // Limite antes de pular a página
+
+  linhas.forEach(linha => {
+    // Se a linha atual passar do limite inferior da folha, cria uma nova página
+    if (y > margemInferiorMax) {
+      doc.addPage();
+      y = 15; // Reseta o topo na nova página
+    }
+    
+    doc.text(linha, 12, y);
+    y += 6; // Altura da linha (espaçamento entre uma linha e outra)
+  });
+
+  doc.save(nomeArquivo);
+}
