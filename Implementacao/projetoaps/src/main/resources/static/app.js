@@ -1,6 +1,7 @@
 let usuarioLogado = null;
 let reposicoesAtivas = new Map();
 let timerMensagemReposicao = null;
+let timerMensagemCompraManual = null;
 
 async function fazerLogin() {
   const email = document.getElementById("emailLogin").value.trim();
@@ -59,6 +60,11 @@ function aplicarPermissoes() {
     (tipo === "GERENTE" || tipo === "ADMIN")
       ? "block"
       : "none";
+
+  document.getElementById("cardCompra").style.display =
+      (tipo === "GERENTE" || tipo === "ADMIN")
+      ? "block"
+      : "none";
 }
 
 function sair() {
@@ -73,14 +79,22 @@ async function carregarProdutos() {
   const resposta = await fetch("/produtos");
   const produtos = await resposta.json();
 
-  const select = document.getElementById("produtoSelect");
-  select.innerHTML = "";
+  const vendaSelect = document.getElementById("produtoSelect");
+  const compraSelect = document.getElementById("produtoCompraSelect");
+
+  vendaSelect.innerHTML = "";
+  compraSelect.innerHTML = "";
 
   produtos.forEach(produto => {
-    const option = document.createElement("option");
-    option.value = produto.id;
-    option.textContent = produto.nome;
-    select.appendChild(option);
+    const optionVenda = document.createElement("option");
+    optionVenda.value = produto.id;
+    optionVenda.textContent = produto.nome;
+    vendaSelect.appendChild(optionVenda);
+
+    const optionCompra = document.createElement("option");
+    optionCompra.value = produto.id;
+    optionCompra.textContent = produto.nome;
+    compraSelect.appendChild(optionCompra);
   });
 }
 
@@ -88,19 +102,29 @@ async function carregarLojas() {
   const resposta = await fetch("/lojas");
   const lojas = await resposta.json();
 
-  const select = document.getElementById("lojaSelect");
-  select.innerHTML = "";
+  const vendaSelect = document.getElementById("lojaSelect");
+  const compraSelect = document.getElementById("lojaCompraSelect");
+
+  vendaSelect.innerHTML = "";
+  compraSelect.innerHTML = "";
 
   lojas.forEach(loja => {
-    const option = document.createElement("option");
-    option.value = loja.id;
-    option.textContent = loja.nome;
-    select.appendChild(option);
+    const optionVenda = document.createElement("option");
+    optionVenda.value = loja.id;
+    optionVenda.textContent = loja.nome;
+    vendaSelect.appendChild(optionVenda);
+
+    const optionCompra = document.createElement("option");
+    optionCompra.value = loja.id;
+    optionCompra.textContent = loja.nome;
+    compraSelect.appendChild(optionCompra);
   });
 
   if (usuarioLogado?.loja?.id) {
-    select.value = usuarioLogado.loja.id;
-    select.disabled = true;
+    vendaSelect.value = usuarioLogado.loja.id;
+    vendaSelect.disabled = true;
+    compraSelect.value = usuarioLogado.loja.id;
+    compraSelect.disabled = true;
   }
 }
 
@@ -163,6 +187,89 @@ async function registrarVenda() {
   } else {
     atualizarStatusReposicao(`Não foi possível registrar ${produtoNome} na ${lojaNome}.`, "erro");
     alert("Erro ao registrar venda.");
+  }
+}
+
+async function solicitarCompra() {
+
+  const produtoId =
+    document.getElementById("produtoCompraSelect").value;
+
+  const lojaId =
+    document.getElementById("lojaCompraSelect").value;
+
+  const quantidade = Number(document.getElementById("quantidadeCompra").value);
+  const produtoNome = document.querySelector(`#produtoCompraSelect option[value="${produtoId}"]`)?.textContent || "Produto";
+  const lojaNome = document.querySelector(`#lojaCompraSelect option[value="${lojaId}"]`)?.textContent || "Loja";
+
+  if (!Number.isInteger(quantidade) || quantidade <= 0) {
+    atualizarStatusCompra(
+      `Quantidade inválida para ${produtoNome} na ${lojaNome}. Use um valor maior que zero.`,
+      "erro"
+    );
+    alert("A quantidade precisa ser um número inteiro maior que zero.");
+    return;
+  }
+
+  atualizarStatusCompra(
+    `Solicitando compra manual de ${produtoNome} para ${lojaNome}...`,
+    "processando"
+  );
+
+  const resposta = await fetch(
+    `/ordens-compra/manual?produtoId=${produtoId}&lojaId=${lojaId}&quantidade=${quantidade}`,
+    { method: "POST" }
+  );
+
+  if (resposta.ok) {
+    atualizarStatusCompra(`Compra manual de ${produtoNome} para ${lojaNome} solicitada com sucesso.`, "ok");
+    await carregarTudo();
+  } else {
+    const erro = await resposta.text();
+    atualizarStatusCompra(`Erro ao solicitar compra manual: ${erro}`, "erro");
+    alert("Erro ao solicitar compra.");
+  }
+}
+
+function atualizarStatusCompra(texto, tipo) {
+  const caixa = document.getElementById("statusCompraManual");
+
+  if (!caixa) return;
+
+  if (timerMensagemCompraManual) {
+    clearTimeout(timerMensagemCompraManual);
+    timerMensagemCompraManual = null;
+  }
+
+  caixa.textContent = texto;
+  caixa.className = `status-reposicao status-${tipo}`;
+
+  if (tipo !== "erro") {
+    timerMensagemCompraManual = setTimeout(() => {
+      const elemento = document.getElementById("statusCompraManual");
+
+      if (!elemento) return;
+
+      elemento.textContent = "Use esta opção para registrar uma ordem de compra manual que será enviada ao fornecedor.";
+      elemento.className = "status-reposicao status-neutro";
+    }, 8000);
+  }
+}
+
+function formatarStatus(status) {
+
+  switch(status) {
+    case "PENDENTE":
+      return "🟡 Pedido enviado";
+
+    case "EM_PROCESSAMENTO":
+      return "🚚 Em transporte";
+
+    case "CONCLUIDA":
+      return "✅ Recebido";
+
+    default:
+      return status;
   }
 }
 
@@ -271,7 +378,7 @@ function obterStatusReposicaoLinha(estoque) {
   }
 
   if (estadoNormalizado.includes("CRITICO")) {
-    return `<span class="reposicao-label reposicao-critica">Crítico: aguardando transferência ou compra para ${estoque.produto.nome} / ${estoque.loja.nome}</span>`;
+    return `<span class="reposicao-label reposicao-critica">Crítico: aguardando transferência ou compra</span>`;
   }
 
   if (estadoNormalizado.includes("ESGOTADO")) {

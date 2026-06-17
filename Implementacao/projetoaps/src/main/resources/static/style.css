@@ -1,146 +1,158 @@
+/* ==========================================================================
+   1. CONFIGURAÇÕES GERAIS & VARIÁVEIS
+   ========================================================================== */
+:root {
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  
+  /* Cores de Ação */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+}
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   margin: 0;
-  background: #f4f6f8;
-  color: #1f2937;
+  background: var(--bg-primary);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
 }
 
 .container {
-  max-width: 1200px;
-  margin: 30px auto;
-  padding: 0 20px;
+  max-width: 1300px;
+  margin: 40px auto;
+  padding: 0 24px;
 }
 
-.card {
-  background: white;
-  padding: 22px;
-  margin-bottom: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px #00000020;
-}
-
-.login-card {
-  max-width: 420px;
-  margin: 100px auto;
-}
-
+/* ==========================================================================
+   2. LAYOUT & GRID (O segredo do alinhamento)
+   ========================================================================== */
 .topo {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
 }
 
+.topo h1 {
+  margin: 0 0 4px 0;
+  color: #0f172a;
+}
+
+.topo p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Define duas colunas bem estruturadas na linha principal */
 .grid {
   display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 20px;
+  grid-template-columns: 380px 1fr; /* Coluna esquerda fixa e a direita expande */
+  gap: 24px;
+  align-items: start; /* Impede que os cards estiquem artificialmente */
+  margin-bottom: 32px;
 }
 
-h1, h2 {
+/* Faz os cards de venda e compra empilharem perfeitamente à esquerda */
+.coluna-formularios {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Área de gestão inferior (Tabelas de relatórios) */
+#areaGestao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+/* Ajuste fino para os cards de formulários não acumularem margem externa desnecessária */
+.coluna-formularios .card {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   3. COMPONENTES (Cards, Formulários e Botões)
+   ========================================================================== */
+.card {
+  background: var(--bg-card);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  border: 1px solid var(--border-color);
+}
+
+.login-card {
+  max-width: 420px;
+  margin: 140px auto;
+  text-align: center;
+}
+
+h2 {
   margin-top: 0;
+  margin-bottom: 20px;
+  color: #0f172a;
+  font-size: 1.35rem;
 }
 
 label {
   display: block;
-  margin-top: 12px;
-  font-weight: bold;
+  margin-top: 14px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #475569;
 }
 
-input, select, button {
-  padding: 10px;
-  margin-top: 6px;
+/* Inputs e Selects ocupando 100% do card horizontalmente */
+input, select {
   width: 100%;
-  max-width: 320px;
+  padding: 12px;
+  margin-top: 6px;
   box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 button {
-  background: #2563eb;
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  margin-top: 16px;
-  font-weight: bold;
+  margin-top: 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: var(--primary-hover);
 }
 
-.status-reposicao {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  transition: opacity 0.35s ease, transform 0.35s ease, background-color 0.35s ease;
-}
-
-.status-neutro {
-  background: #f8fafc;
-  color: #334155;
-  border-color: #cbd5e1;
-}
-
-.status-processando {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
-}
-
-.status-analise {
-  background: #fff7ed;
-  color: #9a3412;
-  border-color: #fed7aa;
-}
-
-.status-ok {
-  background: #ecfdf5;
-  color: #065f46;
-  border-color: #a7f3d0;
-}
-
-.status-erro {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #fecaca;
-}
-
-.estado-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.estado-disponivel {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.estado-alerta {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.estado-critico {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.estado-esgotado {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.estado-neutro {
-  background: #e2e8f0;
-  color: #334155;
+button:active {
+  transform: scale(0.98);
 }
 
 .reposicao-label {
@@ -178,50 +190,116 @@ button:hover {
 }
 
 .botao-secundario {
-  background: #6b7280;
-  max-width: 120px;
+  background: var(--secondary);
+  max-width: 100px;
+  margin-top: 0;
 }
 
 .botao-secundario:hover {
-  background: #4b5563;
+  background: var(--secondary-hover);
+}
+
+/* ==========================================================================
+   4. TABELAS MODERNAS
+   ========================================================================== */
+.table-container {
+  overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  margin-top: 12px;
+  margin-top: 16px;
+  font-size: 0.95rem;
 }
 
 th, td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
+  padding: 14px 16px;
   text-align: left;
 }
 
 th {
-  background: #e5e7eb;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
 }
 
+td {
+  border-bottom: 1px solid var(--border-color);
+  color: #334155;
+}
+
+tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* ==========================================================================
+   5. STATUS & BADGES
+   ========================================================================== */
+.status-reposicao {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.status-neutro { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
+.status-processando { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.status-analise { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.status-ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.status-erro { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  min-width: 85px;
+  text-align: center;
+}
+
+.estado-disponivel { background: #dcfce7; color: #15803d; }
+.estado-alerta { background: #fef3c7; color: #b45309; }
+.estado-critico { background: #fee2e2; color: #b91c1c; }
+.estado-esgotado { background: #f1f5f9; color: #475569; }
+
+/* Relatórios */
+.cabecalho-relatorio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cabecalho-relatorio h2 { margin: 0; }
+.cabecalho-relatorio button { width: auto; margin-top: 0; padding: 8px 16px; }
+
+/* ==========================================================================
+   6. RESPONSIVIDADE (Ajustes finos para telas menores)
+   ========================================================================== */
 @media (max-width: 900px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Vira tudo uma coluna única se a tela for pequena */
   }
 }
 
-.cabecalho-relatorio{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:15px;
-}
-
-.cabecalho-relatorio h2{
-  margin:0;
-}
-
-.cabecalho-relatorio button{
-  width:auto;
-  max-width:none;
-  margin-top:0;
+@media (max-width: 600px) {
+  #areaGestao {
+    grid-template-columns: 1fr;
+  }
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .botao-secundario {
+    width: 100%;
+    max-width: none;
+  }
 }

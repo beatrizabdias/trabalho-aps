@@ -53,64 +53,60 @@
 
             <div class="grid">
 
-                <!-- REGISTRAR VENDA -->
-                <section id="cardVenda" class="card">
+    <div class="coluna-formularios">
+        
+        <section id="cardVenda" class="card">
+            <h2>Registrar Venda</h2>
+            <label>Produto</label>
+            <select id="produtoSelect"></select>
 
-                    <h2>Registrar Venda</h2>
+            <label>Loja</label>
+            <select id="lojaSelect"></select> <label>Quantidade</label>
+            <input id="quantidade" type="number" value="1"> <button onclick="registrarVenda()">Registrar Venda</button>
 
-                    <label>Produto</label>
-                    <select id="produtoSelect"></select>
-
-                    <label>Loja</label>
-                    <select id="lojaSelect"></select>
-
-                    <label>Quantidade</label>
-                    <input
-                        id="quantidade"
-                        type="number"
-                        value="1"
-                        min="1"
-                        step="1"
-                    >
-
-                    <button onclick="registrarVenda()">
-                        Registrar Venda
-                    </button>
-
-                    <div id="statusReposicao" class="status-reposicao status-neutro">
-                        O sistema acompanha automaticamente o estoque após a venda.
-                    </div>
-
-                </section>
-
-                <!-- ESTOQUES -->
-                <section class="card">
-
-                    <h2>Estoques</h2>
-
-                    <button onclick="carregarTudo()">
-                        Atualizar Dados
-                    </button>
-
-                    <table>
-
-                        <thead>
-                            <tr>
-                                <th>Produto</th>
-                                <th>Loja</th>
-                                <th>Quantidade</th>
-                                <th>Estado</th>
-                                <th>Reposição</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="tabelaEstoques"></tbody>
-
-                    </table>
-
-                </section>
-
+            <div id="statusReposicao" class="status-reposicao status-neutro">
+                O sistema acompanha automaticamente o estoque após a venda.
             </div>
+        </section>
+
+        <section id="cardCompra" class="card">
+            <h2>Solicitar Compra Manual</h2>
+            <label>Produto</label>
+            <select id="produtoCompraSelect"></select>
+
+            <label>Loja</label>
+            <select id="lojaCompraSelect"></select>
+
+            <label>Quantidade</label>
+            <input id="quantidadeCompra" type="number" value="30">
+
+            <button onclick="solicitarCompra()">Solicitar Compra</button>
+
+            <div id="statusCompraManual" class="status-reposicao status-neutro">
+                Use esta opção para registrar uma ordem de compra manual que será enviada ao fornecedor.
+            </div>
+        </section>
+
+    </div> 
+    <section class="card">
+        <h2>Estoques</h2>
+        <button onclick="carregarTudo()">Atualizar Dados</button>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Loja</th>
+                        <th>Quantidade</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaEstoques"></tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
 
             <!-- ÁREA DE GESTÃO -->
             <section id="areaGestao">
