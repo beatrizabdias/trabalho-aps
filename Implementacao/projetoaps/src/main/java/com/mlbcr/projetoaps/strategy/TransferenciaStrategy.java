@@ -20,7 +20,7 @@ public class TransferenciaStrategy implements ReposicaoStrategy {
             return false;
         }
 
-        int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoque);
-        return estoque.getQuantidade() - limiteOrigem >= QUANTIDADE_TRANSFERENCIA;
+        int quantidadeAtual = estoque.getQuantidade() == null ? 0 : estoque.getQuantidade();
+        return quantidadeAtual > prioridadeStrategy.obterLimiteSeguroOrigem();
     }
 }

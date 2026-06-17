@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mlbcr.projetoaps.model.Venda;
+import com.mlbcr.projetoaps.dto.VendaRespostaDTO;
 import com.mlbcr.projetoaps.service.VendaService;
 
 @RestController
@@ -18,17 +18,15 @@ public class VendaController {
         this.vendaService = vendaService;
     }
 
-    
     @PostMapping
-    public Venda registrarVenda(
+    public VendaRespostaDTO registrarVenda(
             @RequestParam Long produtoId,
             @RequestParam Long lojaId,
             @RequestParam Integer quantidade) {
 
         return vendaService.registrarVenda(
-            produtoId,
-            lojaId,
-            quantidade
-        );
+                produtoId,
+                lojaId,
+                quantidade);
     }
 }

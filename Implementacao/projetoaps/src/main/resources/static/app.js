@@ -1,4 +1,5 @@
 let usuarioLogado = null;
+let monitorReposicao = null;
 
 async function fazerLogin() {
   const email = document.getElementById("emailLogin").value.trim();
@@ -107,15 +108,36 @@ async function registrarVenda() {
   const lojaId = document.getElementById("lojaSelect").value;
   const quantidade = document.getElementById("quantidade").value;
 
+  atualizarStatusReposicao("Analisando venda e possível reposição automática...", "processando");
+
   const resposta = await fetch(
     `/vendas?produtoId=${produtoId}&lojaId=${lojaId}&quantidade=${quantidade}`,
     { method: "POST" }
   );
 
   if (resposta.ok) {
-    alert("Venda registrada com sucesso!");
+    const retorno = await resposta.json();
+
+    if (retorno.tipoReposicao && retorno.tipoReposicao !== "SEM_ACAO") {
+      monitorReposicao = {
+        produtoId: Number(produtoId),
+        lojaId: Number(lojaId),
+        tipoReposicao: retorno.tipoReposicao,
+        mensagem: retorno.detalheReposicao || retorno.mensagem,
+      };
+
+      atualizarStatusReposicao(
+        `${retorno.mensagem} ${retorno.detalheReposicao || ""}`.trim(),
+        "analise"
+      );
+    } else {
+      monitorReposicao = null;
+      atualizarStatusReposicao(retorno.mensagem || "Venda registrada com sucesso.", "ok");
+    }
+
     await carregarTudo();
   } else {
+    atualizarStatusReposicao("Não foi possível registrar a venda.", "erro");
     alert("Erro ao registrar venda.");
   }
 }
@@ -139,10 +161,12 @@ async function carregarEstoques() {
         <td>${estoque.produto.nome}</td>
         <td>${estoque.loja.nome}</td>
         <td>${estoque.quantidade}</td>
-        <td>${formatarEstado(estoque.estado)}</td>
+        <td><span class="estado-badge ${getClasseEstado(estoque.estado)}">${formatarEstado(estoque.estado)}</span></td>
       </tr>
     `;
   });
+
+  verificarConclusaoReposicao(estoques);
 }
 
 function formatarEstado(estado) {
@@ -151,12 +175,67 @@ function formatarEstado(estado) {
   // Remove acentos e converte para maiúsculas para comparar
   const e = estado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  if (e.includes("NORMAL")) return "🟢 Normal";
+  if (e.includes("DISPONIVEL") || e.includes("NORMAL")) return "🟢 Disponível";
   if (e.includes("ALERTA")) return "🟡 Alerta";
   if (e.includes("CRITICO")) return "🔴 Crítico";
   if (e.includes("ESGOTADO")) return "⚫ Esgotado";
 
   return "⚪ " + estado;
+}
+
+function getClasseEstado(estado) {
+  if (!estado) return "estado-neutro";
+
+  const e = estado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  if (e.includes("DISPONIVEL") || e.includes("NORMAL")) return "estado-disponivel";
+  if (e.includes("ALERTA")) return "estado-alerta";
+  if (e.includes("CRITICO")) return "estado-critico";
+  if (e.includes("ESGOTADO")) return "estado-esgotado";
+
+  return "estado-neutro";
+}
+
+function atualizarStatusReposicao(texto, tipo) {
+  const caixa = document.getElementById("statusReposicao");
+
+  if (!caixa) return;
+
+  caixa.textContent = texto;
+  caixa.className = `status-reposicao status-${tipo}`;
+}
+
+function verificarConclusaoReposicao(estoques) {
+  if (!monitorReposicao) return;
+
+  const estoqueAlvo = estoques.find(
+    estoque =>
+      estoque.produto?.id === monitorReposicao.produtoId &&
+      estoque.loja?.id === monitorReposicao.lojaId
+  );
+
+  if (!estoqueAlvo) return;
+
+  const estadoAtual = formatarEstado(estoqueAlvo.estado);
+  const estadoNormalizado = (estoqueAlvo.estado || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+
+  if (estadoNormalizado.includes("CRITICO") || estadoNormalizado.includes("ESGOTADO")) {
+    atualizarStatusReposicao(
+      `Estoque ainda em ${estadoAtual}. A reposição automática está em andamento...`,
+      "analise"
+    );
+    return;
+  }
+
+  atualizarStatusReposicao(
+    `Reposição concluída automaticamente. Novo estado: ${estadoAtual}.`,
+    "ok"
+  );
+
+  monitorReposicao = null;
 }
 
 function formatarData(data) {

@@ -29,15 +29,14 @@ public class ComercioService {
     // Verifica se a loja do Méier (ou outra) precisa de reposição de emergência
     public boolean verificarNecessidadeReposicao(Produto produto, Loja loja) {
         Optional<Estoque> estoqueOpt = estoqueRepository.findByProdutoAndLoja(produto, loja);
-        
+
         if (estoqueOpt.isEmpty()) {
             return true; // Se não tem registro de estoque, precisa repor
         }
 
         Estoque estoque = estoqueOpt.get();
-        int limiteMinimo = prioridadeStrategy.obterQuantidadeMinima(estoque);
+        int limiteMinimo = prioridadeStrategy.obterLimiteSeguroOrigem();
 
-        // Retorna true se o estoque atual estiver abaixo do limite configurado pela política da loja
         return estoque.getQuantidade() < limiteMinimo;
     }
 

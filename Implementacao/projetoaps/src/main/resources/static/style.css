@@ -69,6 +69,79 @@ button:hover {
   background: #1d4ed8;
 }
 
+.status-reposicao {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.status-neutro {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.status-processando {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.status-analise {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+.status-ok {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.status-erro {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.estado-disponivel {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado-alerta {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.estado-critico {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.estado-esgotado {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.estado-neutro {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 .botao-secundario {
   background: #6b7280;
   max-width: 120px;

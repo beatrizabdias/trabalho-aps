@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mlbcr.projetoaps.dto.ReposicaoRespostaDTO;
 import com.mlbcr.projetoaps.model.Estoque;
 import com.mlbcr.projetoaps.model.Loja;
 import com.mlbcr.projetoaps.model.OrdemCompra;
@@ -34,7 +35,7 @@ public class ReposicaoService {
 
     private final StateService stateService;
 
-    private static final int QTD_TRANSFERENCIA = 15;
+    private static final int LIMITE_CRITICO = 20;
 
     public ReposicaoService(
             EstoqueRepository estoqueRepository,
@@ -54,69 +55,129 @@ public class ReposicaoService {
         this.prioridadeStrategy = prioridadeStrategy;
         this.reposicaoAcaoNotifier = reposicaoAcaoNotifier;
         this.stateService = stateService;
-    } 
+    }
 
     public void analisarReposicao(Produto produto, Loja loja) {
+        executarReposicao(produto, loja);
+    }
+
+    public ReposicaoRespostaDTO diagnosticarReposicao(Produto produto, Loja loja) {
+        return resolverReposicao(produto, loja, false);
+    }
+
+    public ReposicaoRespostaDTO executarReposicao(Produto produto, Loja loja) {
+        return resolverReposicao(produto, loja, true);
+    }
+
+    private ReposicaoRespostaDTO resolverReposicao(Produto produto, Loja loja, boolean executar) {
         Estoque estoqueAtual = estoqueRepository
-            .findByProdutoAndLoja(produto, loja)
-            .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
+                .findByProdutoAndLoja(produto, loja)
+                .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
 
-        int limiteCritico = prioridadeStrategy.obterQuantidadeMinima(estoqueAtual);
-        if (estoqueAtual.getQuantidade() >= limiteCritico) {
-            return;
-        }
+        int quantidadeAtual = estoqueAtual.getQuantidade() == null ? 0 : estoqueAtual.getQuantidade();
 
-        List<Loja> outrasLojas = lojaRepository.findAll()
-                .stream()
-                .filter(l -> !l.getId().equals(loja.getId()))
-                .toList();
-
-        Estoque melhorEstoqueOrigem = null;
-        Loja melhorLojaOrigem = null;
-        int maiorSaldoDisponivel = 0;
-
-        for (Loja outraLoja : outrasLojas) {
-            Estoque estoqueOutraLoja = estoqueRepository
-                    .findByProdutoAndLoja(produto, outraLoja)
-                    .orElse(null);
-
-            if (estoqueOutraLoja == null) {
-                continue;
+        if (quantidadeAtual == 0) {
+            int quantidadeCompra = prioridadeStrategy.calcularQuantidadeCompra(estoqueAtual);
+            if (executar) {
+                gerarOrdemCompra(produto, loja, quantidadeCompra);
             }
 
-            int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoqueOutraLoja);
-            int saldoDisponivel = estoqueOutraLoja.getQuantidade() - limiteOrigem;
+            return new ReposicaoRespostaDTO(
+                    "COMPRA",
+                    String.format("Estoque esgotado. Ordem de compra para atingir %d unidades.",
+                            prioridadeStrategy.obterMetaCompra()),
+                    quantidadeCompra,
+                    prioridadeStrategy.obterMetaCompra(),
+                    null,
+                    null);
+        }
 
-            if (saldoDisponivel > maiorSaldoDisponivel) {
-                maiorSaldoDisponivel = saldoDisponivel;
-                melhorLojaOrigem = outraLoja;
-                melhorEstoqueOrigem = estoqueOutraLoja;
+        if (quantidadeAtual <= LIMITE_CRITICO) {
+            int quantidadeNecessaria = prioridadeStrategy.obterMetaTransferencia() - quantidadeAtual;
+
+            if (quantidadeNecessaria > 0) {
+                List<Loja> outrasLojas = lojaRepository.findAll()
+                        .stream()
+                        .filter(l -> !l.getId().equals(loja.getId()))
+                        .toList();
+
+                Estoque melhorEstoqueOrigem = null;
+                Loja melhorLojaOrigem = null;
+                int maiorSaldoDisponivel = 0;
+
+                for (Loja outraLoja : outrasLojas) {
+                    Estoque estoqueOutraLoja = estoqueRepository
+                            .findByProdutoAndLoja(produto, outraLoja)
+                            .orElse(null);
+
+                    if (estoqueOutraLoja == null) {
+                        continue;
+                    }
+
+                    int saldoDisponivel = estoqueOutraLoja.getQuantidade()
+                            - prioridadeStrategy.obterLimiteSeguroOrigem();
+
+                    if (saldoDisponivel >= quantidadeNecessaria && saldoDisponivel > maiorSaldoDisponivel) {
+                        maiorSaldoDisponivel = saldoDisponivel;
+                        melhorLojaOrigem = outraLoja;
+                        melhorEstoqueOrigem = estoqueOutraLoja;
+                    }
+                }
+
+                if (melhorEstoqueOrigem != null && transferenciaStrategy.podeAplicar(melhorEstoqueOrigem)) {
+                    if (executar) {
+                        realizarTransferencia(produto, loja, melhorLojaOrigem, estoqueAtual, melhorEstoqueOrigem,
+                                quantidadeNecessaria);
+                    }
+
+                    return new ReposicaoRespostaDTO(
+                            "TRANSFERENCIA",
+                            String.format("Reposição por transferência para atingir %d unidades.",
+                                    prioridadeStrategy.obterMetaTransferencia()),
+                            quantidadeNecessaria,
+                            prioridadeStrategy.obterMetaTransferencia(),
+                            melhorLojaOrigem.getId(),
+                            melhorLojaOrigem.getNome());
+                }
             }
+
+            int quantidadeCompra = prioridadeStrategy.calcularQuantidadeCompra(estoqueAtual);
+            if (executar) {
+                gerarOrdemCompra(produto, loja, quantidadeCompra);
+            }
+
+            return new ReposicaoRespostaDTO(
+                    "COMPRA",
+                    String.format("Transferência insuficiente. Ordem de compra para atingir %d unidades.",
+                            prioridadeStrategy.obterMetaCompra()),
+                    quantidadeCompra,
+                    prioridadeStrategy.obterMetaCompra(),
+                    null,
+                    null);
         }
 
-        if (melhorEstoqueOrigem != null && transferenciaStrategy.podeAplicar(melhorEstoqueOrigem)) {
-            realizarTransferencia(produto, loja, melhorLojaOrigem, estoqueAtual, melhorEstoqueOrigem);
-            return;
-        }
-
-        int quantidadeCompra = prioridadeStrategy.obterQuantidadeLoteCompra(estoqueAtual);
-        gerarOrdemCompra(produto, loja, quantidadeCompra);
+        return new ReposicaoRespostaDTO(
+                "SEM_ACAO",
+                "Estoque já está em zona de conforto. Nenhuma reposição automática necessária.",
+                0,
+                quantidadeAtual,
+                null,
+                null);
     }
 
     private void realizarTransferencia(
             Produto produto, Loja lojaDestino, Loja lojaOrigem,
-            Estoque estoqueDestino, Estoque estoqueOrigem) {
+            Estoque estoqueDestino, Estoque estoqueOrigem, int quantidadeTransferencia) {
 
-        int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoqueOrigem);
-        int maxTransferivel = estoqueOrigem.getQuantidade() - limiteOrigem;
-        int quantidadeTransferencia = Math.min(QTD_TRANSFERENCIA, Math.max(maxTransferivel, 0));
+        int maxTransferivel = estoqueOrigem.getQuantidade() - prioridadeStrategy.obterLimiteSeguroOrigem();
+        int quantidadeEfetiva = Math.min(quantidadeTransferencia, Math.max(maxTransferivel, 0));
 
-        if (quantidadeTransferencia <= 0) {
+        if (quantidadeEfetiva <= 0) {
             return;
         }
 
-        estoqueDestino.setQuantidade(estoqueDestino.getQuantidade() + quantidadeTransferencia);
-        estoqueOrigem.setQuantidade(estoqueOrigem.getQuantidade() - quantidadeTransferencia);
+        estoqueDestino.setQuantidade(estoqueDestino.getQuantidade() + quantidadeEfetiva);
+        estoqueOrigem.setQuantidade(estoqueOrigem.getQuantidade() - quantidadeEfetiva);
 
         stateService.atualizarEstado(produto, estoqueDestino);
         stateService.atualizarEstado(produto, estoqueOrigem);
@@ -128,7 +189,7 @@ public class ReposicaoService {
         transferencia.setProduto(produto);
         transferencia.setLojaOrigem(lojaOrigem);
         transferencia.setLojaDestino(lojaDestino);
-        transferencia.setQuantidade(quantidadeTransferencia);
+        transferencia.setQuantidade(quantidadeEfetiva);
         transferencia.setDataTransferencia(LocalDateTime.now());
 
         transferenciaRepository.save(transferencia);
@@ -151,10 +212,9 @@ public class ReposicaoService {
 
     @Transactional
     protected void gerarOrdemCompra(Produto produto, Loja loja) {
-        int quantidadeCompra = prioridadeStrategy.obterQuantidadeLoteCompra(
-            estoqueRepository.findByProdutoAndLoja(produto, loja)
-                .orElseThrow(() -> new RuntimeException("Estoque não encontrado"))
-        );
+        int quantidadeCompra = prioridadeStrategy.calcularQuantidadeCompra(
+                estoqueRepository.findByProdutoAndLoja(produto, loja)
+                        .orElseThrow(() -> new RuntimeException("Estoque não encontrado")));
         gerarOrdemCompra(produto, loja, quantidadeCompra);
     }
 
@@ -188,10 +248,9 @@ public class ReposicaoService {
             OrdemCompra ordemConcluida = ordemCompraRepository.save(ordem);
 
             String descricao = String.format(
-                "Ordem de compra concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
-                ordemConcluida.getLoja().getId(),
-                ordemConcluida.getQuantidade()
-            );
+                    "Ordem de compra concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
+                    ordemConcluida.getLoja().getId(),
+                    ordemConcluida.getQuantidade());
 
             ReposicaoEvent event = new ReposicaoEvent(ordemConcluida, descricao);
             reposicaoAcaoNotifier.notificar(event);

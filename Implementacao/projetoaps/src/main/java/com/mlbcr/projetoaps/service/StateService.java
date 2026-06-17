@@ -12,34 +12,26 @@ import com.mlbcr.projetoaps.state.NormalState;
 
 @Service
 public class StateService {
-    private int qtdAlerta = 30;
+    private static final int LIMITE_CRITICO = 20;
+    private static final int LIMITE_ALERTA = 50;
 
     public void atualizarEstado(Produto produto, Estoque estoque) {
 
         Integer quantidade = estoque.getQuantidade();
-        Integer minimo = produto.getQtdMinima();
 
         int qtd = quantidade == null ? 0 : quantidade.intValue();
-        int qtdMinima = minimo == null ? 0 : minimo.intValue();
-
-        System.out.println(
-            "Qtd=" + qtd +
-            " Min=" + qtdMinima
-        );
 
         EstadoEstoque estado;
 
         if (qtd == 0) {
             estado = new EsgotadoState();
-        } else if (qtd <= qtdMinima) {
+        } else if (qtd <= LIMITE_CRITICO) {
             estado = new CriticoState();
-        } else if (qtd <= qtdAlerta) {
+        } else if (qtd <= LIMITE_ALERTA) {
             estado = new AlertaState();
         } else {
             estado = new NormalState();
         }
-
-        System.out.println("Novo estado = " + estado.getNome());
 
         estoque.setEstado(estado.getNome());
     }
