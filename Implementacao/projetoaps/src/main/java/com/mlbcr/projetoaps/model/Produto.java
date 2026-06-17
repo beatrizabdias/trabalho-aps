@@ -20,6 +20,7 @@ public class Produto {
     private String codigo;
     private String nome;
     private String categoria;
+    private Double valorCompra;
     private Double valorVenda;
     private Integer qtdMinima;
 

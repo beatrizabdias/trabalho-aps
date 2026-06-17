@@ -35,8 +35,12 @@ public class FuncionarioService {
 
     public Funcionario criarFuncionario(FuncionarioRequest request) {
 
-        Loja loja = lojaRepository.findById(request.getLojaId())
-                .orElseThrow(() -> new RuntimeException("Loja não encontrada"));
+        Loja loja = null;
+
+        if (request.getLojaId() != null) {
+            loja = lojaRepository.findById(request.getLojaId())
+                    .orElseThrow(() -> new RuntimeException("Loja não encontrada"));
+        }
 
         Funcionario funcionario = funcionarioFactory.criarFuncionario(request, loja);
 

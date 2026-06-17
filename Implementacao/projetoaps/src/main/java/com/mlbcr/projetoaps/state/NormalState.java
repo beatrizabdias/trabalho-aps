@@ -4,6 +4,6 @@ public class NormalState implements EstadoEstoque {
 
     @Override
     public String getNome() {
-        return "Normal";
+        return "Disponível";
     }
 }

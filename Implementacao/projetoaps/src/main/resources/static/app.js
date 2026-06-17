@@ -32,7 +32,7 @@ function aplicarPermissoes() {
   const areaGerente = document.getElementById("areaGerente");
 
   // Apenas garante a visibilidade inicial baseada no login
-  areaGerente.style.display = (tipo === "GERENTE") ? "block" : "none";
+  areaGerente.style.display = (tipo === "GERENTE" || tipo === "ADMIN") ? "block" : "none";
 }
 
 function sair() {
@@ -122,7 +122,7 @@ async function carregarEstoques() {
 }
 
 function formatarEstado(estado) {
-  if (estado === "NORMAL") return "🟢 Normal";
+  if (estado === "DISPONÍVEL") return "🟢 Disponível";
   if (estado === "ALERTA") return "🟡 Alerta";
   if (estado === "ESGOTADO") return "🔴 Esgotado";
   return "-";
@@ -190,7 +190,7 @@ function carregarTudo() {
   
   const areaGerente = document.getElementById("areaGerente");
 
-  if (tipo === "GERENTE") {
+  if (tipo === "GERENTE" || tipo === "ADMIN") {
     areaGerente.style.display = "block";
     carregarTransferencias();
     carregarOrdensCompra();

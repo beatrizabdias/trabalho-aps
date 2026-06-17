@@ -3,6 +3,7 @@ package com.mlbcr.projetoaps.factory;
 import org.springframework.stereotype.Component;
 
 import com.mlbcr.projetoaps.dto.FuncionarioRequest;
+import com.mlbcr.projetoaps.model.Admin;
 import com.mlbcr.projetoaps.model.Atendente;
 import com.mlbcr.projetoaps.model.Funcionario;
 import com.mlbcr.projetoaps.model.Gerente;
@@ -21,6 +22,8 @@ public class FuncionarioFactory {
             funcionario = new Gerente();
         } else if ("ATENDENTE".equalsIgnoreCase(request.getTipo())) {
             funcionario = new Atendente();
+        } else if ("ADMIN".equalsIgnoreCase(request.getTipo())) {
+            funcionario = new Admin();
         } else {
             throw new RuntimeException("Tipo de funcionário inválido");
         }

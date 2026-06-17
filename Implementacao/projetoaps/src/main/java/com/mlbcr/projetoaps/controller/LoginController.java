@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mlbcr.projetoaps.dto.LoginRequest;
 import com.mlbcr.projetoaps.dto.LoginResponse;
+import com.mlbcr.projetoaps.model.Admin;
 import com.mlbcr.projetoaps.model.Atendente;
 import com.mlbcr.projetoaps.model.Funcionario;
 import com.mlbcr.projetoaps.model.Gerente;
@@ -38,6 +39,8 @@ public class LoginController {
             response.setTipo("GERENTE");
         } else if (funcionario instanceof Atendente) {
             response.setTipo("ATENDENTE");
+        } else if (funcionario instanceof Admin) {
+            response.setTipo("ADMIN");
         } else {
             response.setTipo("FUNCIONARIO");
         }
