@@ -4,6 +4,6 @@ public class EsgotadoState implements EstadoEstoque {
 
     @Override
     public String getNome() {
-        return "Esgotado";
+        return "ESGOTADO";
     }
 }
