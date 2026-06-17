@@ -24,13 +24,17 @@ async function fazerLogin() {
   document.getElementById("loginCard").style.display = "none";
   document.getElementById("sistema").style.display = "block";
 
-  if (usuarioLogado.tipoFuncionario === 'ADMIN') {
-    usuarioInfo.textContent =
-    `${usuarioLogado.nome} | ADMIN | Acesso Global`;
-  }
+  // Captura o tipo de funcionário de qualquer uma das duas chaves possíveis (camelCase ou snake_case)
+  const tipo = ( usuarioLogado.tipo_funcionario || "").toUpperCase().trim();
 
-  document.getElementById("usuarioInfo").textContent =
-    `${usuarioLogado.nome} | ${usuarioLogado.email} | ${usuarioLogado.loja?.nome ?? "Sem loja"}`;
+  const infoElemento = document.getElementById("usuarioInfo");
+
+  // Agora compara o tipo normalizado em maiúsculo
+  if (tipo === 'ADMIN') {
+    infoElemento.textContent = `${usuarioLogado.nome} | ADMIN | Acesso Global`;
+  } else {
+    infoElemento.textContent = `${usuarioLogado.nome} | ${usuarioLogado.email} | ${usuarioLogado.loja?.nome ?? "Sem loja"}`;
+  }
 
   aplicarPermissoes();
   await carregarTudo();
@@ -41,7 +45,6 @@ async function fazerLogin() {
     }
   }, 2000);
 }
-
 function aplicarPermissoes() {
 
   const tipo =
@@ -536,14 +539,14 @@ async function carregarTransferencias() {
     usuarioLogado.tipoFuncionario ||
     usuarioLogado.tipo_funcionario;
 
-  // Gerente vê apenas sua loja
-  if (tipo === "GERENTE" && usuarioLogado.loja) {
-    transferencias = transferencias.filter(
-      t =>
-        t.lojaOrigem.id === usuarioLogado.loja.id ||
-        t.lojaDestino.id === usuarioLogado.loja.id
-    );
-  }
+  // // Gerente vê apenas sua loja
+  // if (tipo === "GERENTE" && usuarioLogado.loja) {
+  //   transferencias = transferencias.filter(
+  //     t =>
+  //       t.lojaOrigem.id === usuarioLogado.loja.id ||
+  //       t.lojaDestino.id === usuarioLogado.loja.id
+  //   );
+  // }
 
   const tabela =
     document.getElementById("tabelaTransferencias");
@@ -565,7 +568,16 @@ async function carregarTransferencias() {
 
 async function carregarOrdensCompra() {
   const resposta = await fetch("/ordens-compra");
-  const ordens = await resposta.json();
+  let ordens = await resposta.json();
+
+  const tipo = (usuarioLogado?.tipo_funcionario || "").toUpperCase().trim();
+
+  // filtra para exibir apenas as ordens cujo ID da loja case com a loja do gerente
+  if (tipo === "GERENTE" && usuarioLogado?.loja?.id) {
+    ordens = ordens.filter(
+      o => o.loja?.id === usuarioLogado.loja.id
+    );
+  }
 
   const tabela = document.getElementById("tabelaOrdens");
   tabela.innerHTML = "";
@@ -576,8 +588,8 @@ async function carregarOrdensCompra() {
 
     tabela.innerHTML += `
       <tr>
-        <td>${o.produto.nome}</td>
-        <td>${o.loja.nome}</td>
+        <td>${o.produto?.nome ?? "Sem produto"}</td>
+        <td>${o.loja?.nome ?? "Sem loja"}</td>
         <td>${o.fornecedor ? o.fornecedor.razaoSocial : "Sem fornecedor"}</td>
         <td>${o.quantidade}</td>
         <td>${o.status}</td>
