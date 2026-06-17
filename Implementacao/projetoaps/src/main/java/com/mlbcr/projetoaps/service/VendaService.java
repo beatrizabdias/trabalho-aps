@@ -14,7 +14,6 @@ import com.mlbcr.projetoaps.repository.ProdutoRepository;
 import com.mlbcr.projetoaps.repository.VendaRepository;
 
 import com.mlbcr.projetoaps.observer.ReposicaoObserver;
-import com.mlbcr.projetoaps.service.StateService;
 
 @Service
 public class VendaService {
@@ -65,12 +64,8 @@ public class VendaService {
         estoque.setQuantidade(
             estoque.getQuantidade() - quantidade
         );
+        stateService.atualizarEstado(produto, estoque);
         estoqueRepository.save(estoque);
-
-        stateService.atualizarEstado(
-            produto,
-            estoque
-        );
 
         Venda venda = new Venda();
 

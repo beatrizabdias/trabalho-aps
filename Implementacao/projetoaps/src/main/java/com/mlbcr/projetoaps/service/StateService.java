@@ -13,17 +13,21 @@ public class StateService {
 
         EstadoEstoque estado;
 
-        if (estoque.getQuantidade() == 0) {
+        int qtd = estoque.getQuantidade();
+
+        if (qtd == 0) {
             estado = new EsgotadoState();
 
-        } else if (estoque.getQuantidade() <= produto.getQtdMinima()) {
+        } else if (qtd < 20) {
+            estado = new CriticoState();
+
+        } else if (qtd <= 60) {
             estado = new AlertaState();
 
         } else {
             estado = new NormalState();
         }
 
-        // só funciona se você tiver esse campo no Estoque
         estoque.setEstado(estado.getNome());
     }
 }

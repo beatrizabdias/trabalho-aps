@@ -140,10 +140,17 @@ async function carregarEstoques() {
 }
 
 function formatarEstado(estado) {
-  if (estado === "DISPONÍVEL") return "🟢 Disponível";
-  if (estado === "ALERTA") return "🟡 Alerta";
-  if (estado === "ESGOTADO") return "🔴 Esgotado";
-  return "-";
+  if (!estado) return "⚪ Sem status";
+  
+  // Remove acentos e converte para maiúsculas para comparar
+  const e = estado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  if (e.includes("DISPONIVEL")) return "🟢 Disponível";
+  if (e.includes("ALERTA")) return "🟡 Alerta";
+  if (e.includes("CRITICO")) return "🔴 Crítico";
+  if (e.includes("ESGOTADO")) return "⚫ Esgotado";
+
+  return "⚪ " + estado;
 }
 
 function formatarData(data) {
