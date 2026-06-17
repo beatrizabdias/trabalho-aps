@@ -107,9 +107,18 @@ async function carregarLojas() {
 async function registrarVenda() {
   const produtoId = document.getElementById("produtoSelect").value;
   const lojaId = document.getElementById("lojaSelect").value;
-  const quantidade = document.getElementById("quantidade").value;
+  const quantidade = Number(document.getElementById("quantidade").value);
   const produtoNome = document.querySelector(`#produtoSelect option[value="${produtoId}"]`)?.textContent || "Produto";
   const lojaNome = document.querySelector(`#lojaSelect option[value="${lojaId}"]`)?.textContent || "Loja";
+
+  if (!Number.isInteger(quantidade) || quantidade <= 0) {
+    atualizarStatusReposicao(
+      `Quantidade inválida para ${produtoNome} na ${lojaNome}. Use um valor maior que zero.`,
+      "erro"
+    );
+    alert("A quantidade precisa ser um número inteiro maior que zero.");
+    return;
+  }
 
   atualizarStatusReposicao(
     `Analisando ${produtoNome} na ${lojaNome} para reposição automática...`,

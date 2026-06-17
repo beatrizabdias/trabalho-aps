@@ -2,7 +2,9 @@ package com.mlbcr.projetoaps.service;
 
 import java.time.LocalDateTime;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.mlbcr.projetoaps.dto.ReposicaoRespostaDTO;
 import com.mlbcr.projetoaps.dto.VendaRespostaDTO;
@@ -39,6 +41,12 @@ public class VendaService {
             Long produtoId,
             Long lojaId,
             Integer quantidade) {
+
+        if (quantidade == null || quantidade <= 0) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "A quantidade da venda deve ser maior que zero");
+        }
 
         Produto produto = produtoRepository
                 .findById(produtoId)
