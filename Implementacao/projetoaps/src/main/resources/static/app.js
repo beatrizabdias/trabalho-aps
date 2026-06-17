@@ -22,7 +22,7 @@ async function fazerLogin() {
 
   if (usuarioLogado.tipoFuncionario === 'ADMIN') {
     usuarioInfo.textContent =
-    `${usuario.nome} | ADMIN | Acesso Global`;
+    `${usuarioLogado.nome} | ADMIN | Acesso Global`;
   }
 
   document.getElementById("usuarioInfo").textContent =
@@ -33,11 +33,24 @@ async function fazerLogin() {
 }
 
 function aplicarPermissoes() {
-  const tipo = usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "";
-  const areaGerente = document.getElementById("areaGerente");
 
-  // Apenas garante a visibilidade inicial baseada no login
-  areaGerente.style.display = (tipo === "GERENTE" || tipo === "ADMIN") ? "block" : "none";
+  const tipo =
+    usuarioLogado.tipoFuncionario ||
+    usuarioLogado.tipo_funcionario ||
+    "";
+
+  const areaGestao =
+    document.getElementById("areaGestao");
+
+  if (!areaGestao) {
+    console.error("areaGestao não encontrada");
+    return;
+  }
+
+  areaGestao.style.display =
+    (tipo === "GERENTE" || tipo === "ADMIN")
+      ? "block"
+      : "none";
 }
 
 function sair() {
@@ -207,14 +220,166 @@ function carregarTudo() {
   // Verifica o tipo de usuário para carregar dados sensíveis
   const tipo = usuarioLogado?.tipoFuncionario || usuarioLogado?.tipo_funcionario;
   console.log(usuarioLogado);
-  
-  const areaGerente = document.getElementById("areaGerente");
+
+  const areaGestao = document.getElementById("areaGestao");
 
   if (tipo === "GERENTE" || tipo === "ADMIN") {
-    areaGerente.style.display = "block";
-    carregarTransferencias();
-    carregarOrdensCompra();
+  areaGestao.style.display = "block";
+  carregarTransferencias();
+  carregarOrdensCompra();
   } else {
-    areaGerente.style.display = "none";
+    areaGestao.style.display = "none";
   }
+}
+
+function baixarArquivo(nomeArquivo, conteudo) {
+
+  const blob = new Blob(
+    [conteudo],
+    { type: "text/plain" }
+  );
+
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = nomeArquivo;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function gerarRelatorioTransferencias() {
+
+  const resposta = await fetch("/transferencias");
+  let transferencias = await resposta.json();
+
+  const tipo =
+    usuarioLogado.tipoFuncionario ||
+    usuarioLogado.tipo_funcionario;
+
+  if (
+    tipo === "GERENTE" &&
+    usuarioLogado.loja
+  ) {
+
+    transferencias = transferencias.filter(
+      t =>
+        t.lojaOrigem.id === usuarioLogado.loja.id ||
+        t.lojaDestino.id === usuarioLogado.loja.id
+    );
+  }
+
+  const totalTransferencias =
+    transferencias.length;
+
+  const totalItens =
+    transferencias.reduce(
+      (soma, t) => soma + t.quantidade,
+      0
+    );
+
+  let texto = `
+RELATÓRIO DE TRANSFERÊNCIAS
+==================================================
+
+Gerado por: ${usuarioLogado.nome}
+
+Total de Transferências: ${totalTransferencias}
+Total de Itens Movimentados: ${totalItens}
+
+==================================================
+
+`;
+
+  transferencias.forEach(t => {
+
+    texto += `
+Produto: ${t.produto.nome}
+Origem: ${t.lojaOrigem.nome}
+Destino: ${t.lojaDestino.nome}
+Quantidade: ${t.quantidade}
+Data: ${formatarData(t.dataTransferencia)}
+
+--------------------------------------------------
+
+`;
+  });
+
+  baixarArquivo(
+    "relatorio-transferencias.txt",
+    texto
+  );
+}
+
+async function gerarRelatorioCompras() {
+
+  const resposta =
+    await fetch("/ordens-compra");
+
+  let ordens =
+    await resposta.json();
+
+  const tipo =
+    usuarioLogado.tipoFuncionario ||
+    usuarioLogado.tipo_funcionario;
+
+  if (
+    tipo === "GERENTE" &&
+    usuarioLogado.loja
+  ) {
+
+    ordens = ordens.filter(
+      o =>
+        o.loja.id ===
+        usuarioLogado.loja.id
+    );
+  }
+
+  const totalOrdens =
+    ordens.length;
+
+  const totalComprado =
+    ordens.reduce(
+      (soma, o) => soma + o.quantidade,
+      0
+    );
+
+  let texto = `
+RELATÓRIO DE ORDENS DE COMPRA
+==================================================
+
+Gerado por: ${usuarioLogado.nome}
+
+Total de Ordens: ${totalOrdens}
+Quantidade Total Comprada: ${totalComprado}
+
+==================================================
+
+`;
+
+  ordens.forEach(o => {
+
+    texto += `
+Produto: ${o.produto.nome}
+Loja: ${o.loja.nome}
+Fornecedor: ${
+      o.fornecedor
+        ? o.fornecedor.razaoSocial
+        : "Sem fornecedor"
+    }
+
+Quantidade: ${o.quantidade}
+Status: ${o.status}
+Data: ${formatarData(o.dataCriacao)}
+
+--------------------------------------------------
+
+`;
+  });
+
+  baixarArquivo(
+    "relatorio-compras.txt",
+    texto
+  );
 }
