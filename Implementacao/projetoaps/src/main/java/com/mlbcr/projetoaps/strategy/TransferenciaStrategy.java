@@ -7,7 +7,7 @@ import com.mlbcr.projetoaps.model.Estoque;
 @Component
 public class TransferenciaStrategy implements ReposicaoStrategy {
 
-    private static final int QUANTIDADE_TRANSFERENCIA = 15;
+    //private static final int QUANTIDADE_TRANSFERENCIA = 15;
     private final PrioridadeStrategy prioridadeStrategy;
 
     public TransferenciaStrategy(PrioridadeStrategy prioridadeStrategy) {

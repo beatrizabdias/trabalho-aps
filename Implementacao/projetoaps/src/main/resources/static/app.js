@@ -1,5 +1,6 @@
 let usuarioLogado = null;
 let reposicoesAtivas = new Map();
+let timerMensagemReposicao = null;
 
 async function fazerLogin() {
   const email = document.getElementById("emailLogin").value.trim();
@@ -125,6 +126,7 @@ async function registrarVenda() {
     const chave = criarChaveReposicao(produtoId, lojaId);
 
     if (retorno.tipoReposicao && retorno.tipoReposicao !== "SEM_ACAO") {
+      limparTimerReposicao(chave);
       reposicoesAtivas.set(chave, {
         produtoId: Number(produtoId),
         lojaId: Number(lojaId),
@@ -133,6 +135,7 @@ async function registrarVenda() {
         tipoReposicao: retorno.tipoReposicao,
         mensagem: retorno.detalheReposicao || retorno.mensagem,
         status: "em_andamento",
+        textoConclusao: null,
       });
 
       atualizarStatusReposicao(
@@ -216,8 +219,24 @@ function atualizarStatusReposicao(texto, tipo) {
 
   if (!caixa) return;
 
+  if (timerMensagemReposicao) {
+    clearTimeout(timerMensagemReposicao);
+    timerMensagemReposicao = null;
+  }
+
   caixa.textContent = texto;
   caixa.className = `status-reposicao status-${tipo}`;
+
+  if (tipo !== "erro") {
+    timerMensagemReposicao = setTimeout(() => {
+      const elemento = document.getElementById("statusReposicao");
+
+      if (!elemento) return;
+
+      elemento.textContent = "O sistema acompanha automaticamente o estoque após a venda.";
+      elemento.className = "status-reposicao status-neutro";
+    }, 8000);
+  }
 }
 
 function criarChaveReposicao(produtoId, lojaId) {
@@ -230,6 +249,10 @@ function obterStatusReposicaoLinha(estoque) {
   const reposicao = reposicoesAtivas.get(chave);
 
   if (reposicao) {
+    if (reposicao.status === "concluida") {
+      return `<span class="reposicao-label reposicao-finalizada">${reposicao.textoConclusao || `Reposição concluída para ${estoque.produto.nome} / ${estoque.loja.nome}`}</span>`;
+    }
+
     const acao = reposicao.tipoReposicao === "TRANSFERENCIA" ? "Transferência" : "Compra";
     const destino = reposicao.tipoReposicao === "TRANSFERENCIA"
       ? ` com origem em ${reposicao.mensagem?.includes("origem") ? "outra loja" : "estoque disponível"}`
@@ -268,6 +291,10 @@ function verificarConclusaoReposicao(estoques) {
 
     if (!estoqueAlvo) continue;
 
+    if (reposicao.status === "concluida") {
+      continue;
+    }
+
     const estadoNormalizado = normalizarTexto(estoqueAlvo.estado);
     const estadoAtual = formatarEstado(estoqueAlvo.estado);
 
@@ -279,12 +306,45 @@ function verificarConclusaoReposicao(estoques) {
       continue;
     }
 
-    atualizarStatusReposicao(
-      `${reposicao.produtoNome} na ${reposicao.lojaNome}: reposição concluída automaticamente. Novo estado: ${estadoAtual}.`,
-      "ok"
-    );
+    const textoConclusao = `${reposicao.produtoNome} na ${reposicao.lojaNome}: reposição concluída automaticamente. Novo estado: ${estadoAtual}.`;
 
+    reposicoesAtivas.set(chave, {
+      ...reposicao,
+      status: "concluida",
+      textoConclusao,
+    });
+
+    atualizarStatusReposicao(textoConclusao, "ok");
+    agendarLimpezaReposicao(chave);
+  }
+}
+
+function limparTimerReposicao(chave) {
+  const reposicao = reposicoesAtivas.get(chave);
+
+  if (reposicao?.timerId) {
+    clearTimeout(reposicao.timerId);
+  }
+}
+
+function agendarLimpezaReposicao(chave) {
+  limparTimerReposicao(chave);
+
+  const timerId = setTimeout(() => {
     reposicoesAtivas.delete(chave);
+
+    if (usuarioLogado) {
+      carregarDadosDinamicos();
+    }
+  }, 7000);
+
+  const reposicaoAtual = reposicoesAtivas.get(chave);
+
+  if (reposicaoAtual) {
+    reposicoesAtivas.set(chave, {
+      ...reposicaoAtual,
+      timerId,
+    });
   }
 }
 

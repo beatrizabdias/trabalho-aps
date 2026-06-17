@@ -76,6 +76,7 @@ button:hover {
   border: 1px solid transparent;
   font-size: 0.95rem;
   line-height: 1.4;
+  transition: opacity 0.35s ease, transform 0.35s ease, background-color 0.35s ease;
 }
 
 .status-neutro {
@@ -169,6 +170,11 @@ button:hover {
 .reposicao-ok {
   background: #f8fafc;
   color: #475569;
+}
+
+.reposicao-finalizada {
+  background: #ecfeff;
+  color: #155e75;
 }
 
 .botao-secundario {
