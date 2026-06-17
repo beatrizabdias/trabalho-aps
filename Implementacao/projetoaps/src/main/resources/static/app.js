@@ -539,14 +539,14 @@ async function carregarTransferencias() {
     usuarioLogado.tipoFuncionario ||
     usuarioLogado.tipo_funcionario;
 
-  // // Gerente vê apenas sua loja
-  // if (tipo === "GERENTE" && usuarioLogado.loja) {
-  //   transferencias = transferencias.filter(
-  //     t =>
-  //       t.lojaOrigem.id === usuarioLogado.loja.id ||
-  //       t.lojaDestino.id === usuarioLogado.loja.id
-  //   );
-  // }
+  // Gerente vê apenas sua loja
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    transferencias = transferencias.filter(
+      t =>
+        t.lojaOrigem.id === usuarioLogado.loja.id ||
+        t.lojaDestino.id === usuarioLogado.loja.id
+    );
+  }
 
   const tabela =
     document.getElementById("tabelaTransferencias");
@@ -561,6 +561,46 @@ async function carregarTransferencias() {
         <td>${t.lojaOrigem.nome} -> ${t.lojaDestino.nome}</td>
         <td>${t.quantidade}</td>
         <td>${formatarData(t.dataTransferencia)}</td>
+      </tr>
+    `;
+  });
+}
+
+async function carregarVendas() {
+  const resposta = await fetch("/vendas");
+
+  if (!resposta.ok) {
+    console.error("Erro ao carregar vendas:", resposta.status, await resposta.text());
+    return;
+  }
+
+  let vendas = await resposta.json();
+  if (!Array.isArray(vendas)) {
+    console.warn("Resposta de vendas não é uma lista:", vendas);
+    vendas = [];
+  }
+
+  const tipo =
+    usuarioLogado.tipoFuncionario ||
+    usuarioLogado.tipo_funcionario;
+
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    vendas = vendas.filter(v => v.loja && v.loja.id === usuarioLogado.loja.id);
+  }
+
+  const tabela = document.getElementById("tabelaVendas");
+  if (!tabela) return;
+  tabela.innerHTML = "";
+
+  vendas.forEach(v => {
+    const dataFormatada = formatarData(v.dataVenda || v.dataCriacao || new Date());
+
+    tabela.innerHTML += `
+      <tr>
+        <td>${v.produto?.nome ?? "Sem produto"}</td>
+        <td>${v.loja?.nome ?? "Sem loja"}</td>
+        <td>${v.quantidade ?? ""}</td>
+        <td>${dataFormatada}</td>
       </tr>
     `;
   });
@@ -614,6 +654,7 @@ async function carregarTudo() {
     areaGestao.style.display = "block";
     await carregarTransferencias();
     await carregarOrdensCompra();
+    await carregarVendas();
   } else {
     areaGestao.style.display = "none";
   }
@@ -629,6 +670,7 @@ async function carregarDadosDinamicos() {
     if (tipo === "GERENTE" || tipo === "ADMIN") {
         await carregarTransferencias();
         await carregarOrdensCompra();
+        await carregarVendas();
     }
 }
 
@@ -708,6 +750,44 @@ Data: ${formatarData(t.dataTransferencia)}
   gerarPDF("Relatorio_Transferencias.pdf", texto);
 }
 
+async function gerarRelatorioVendas() {
+  const resposta = await fetch("/vendas");
+  let vendas = await resposta.json();
+
+  const tipo = (usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "").toUpperCase().trim();
+
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    vendas = vendas.filter(v => v.loja && v.loja.id === usuarioLogado.loja.id);
+  }
+
+  let totalItens = 0;
+  const produtos = {};
+
+  vendas.forEach(v => {
+    totalItens += v.quantidade;
+    if (!produtos[v.produto.nome]) produtos[v.produto.nome] = 0;
+    produtos[v.produto.nome] += v.quantidade;
+  });
+
+  let produtoMaisVendido = "Nenhum";
+  let maiorQuantidade = 0;
+
+  for (const produto in produtos) {
+    if (produtos[produto] > maiorQuantidade) {
+      maiorQuantidade = produtos[produto];
+      produtoMaisVendido = produto;
+    }
+  }
+
+  let texto = `==========================================================\nMERCADO CARIOCADA\nRELATÓRIO DE VENDAS\n==========================================================\n\nData de Geração: ${new Date().toLocaleString("pt-BR")}\nGerado por: ${usuarioLogado.nome}\nPerfil: ${tipo}\nLoja: ${usuarioLogado.loja?.nome || "Todas"}\n\n----------------------------------------------------------\nTotal de Vendas: ${vendas.length}\nTotal de Itens Vendidos: ${totalItens}\nProduto Mais Vendido: ${produtoMaisVendido}\nQuantidade Vendida: ${maiorQuantidade}\n\n==========================================================\nDETALHAMENTO\n==========================================================\n`;
+
+  vendas.forEach(v => {
+    texto += `\nProduto: ${v.produto.nome}\nLoja: ${v.loja.nome}\nQuantidade: ${v.quantidade}\nData: ${formatarData(v.dataVenda)}\n----------------------------------------------------------\n`;
+  });
+
+  gerarPDF("Relatorio_Vendas.pdf", texto);
+}
+
 async function gerarRelatorioCompras() {
   const resposta = await fetch("/ordens-compra");
   let ordens = await resposta.json();
@@ -783,9 +863,6 @@ Data: ${formatarData(o.dataCriacao)}
   gerarPDF("Relatorio_Compras.pdf", texto);
 }
 
-// ==========================================================================
-// FUNÇÃO GERAR PDF CORRIGIDA (Com quebra automática de páginas)
-// ==========================================================================
 function gerarPDF(nomeArquivo, texto) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -811,4 +888,56 @@ function gerarPDF(nomeArquivo, texto) {
   });
 
   doc.save(nomeArquivo);
+}
+
+async function gerarRelatorioVendas() {
+  const resposta = await fetch("/vendas");
+  let vendas = await resposta.json();
+
+  const tipo = (usuarioLogado.tipoFuncionario || usuarioLogado.tipo_funcionario || "").toUpperCase().trim();
+
+  if (tipo === "GERENTE" && usuarioLogado.loja) {
+    vendas = vendas.filter(v => v.loja.id === usuarioLogado.loja.id);
+  }
+
+  let totalItens = 0;
+  let faturamentoEstimado = 0;
+
+  vendas.forEach(v => {
+    totalItens += v.quantidade;
+    // Se houver valor de venda no seu objeto de produto
+    if (v.produto?.valorVenda) {
+      faturamentoEstimado += v.quantidade * v.produto.valorVenda;
+    }
+  });
+
+  let texto = `==========================================================
+MERCADO CARIOCADA
+RELATÓRIO HISTÓRICO DE VENDAS
+==========================================================
+
+Data de Geração: ${new Date().toLocaleString("pt-BR")}
+Gerado por: ${usuarioLogado.nome}
+Perfil: ${tipo}
+Loja: ${usuarioLogado.loja?.nome || "Todas"}
+
+----------------------------------------------------------
+Total de Vendas Registradas: ${vendas.length}
+Total de Itens Vendidos: ${totalItens}
+Faturamento Estimado: R$ ${faturamentoEstimado.toFixed(2)}
+
+==========================================================
+DETALHAMENTO DAS VENDAS
+==========================================================\n`;
+
+  vendas.forEach(v => {
+    texto += `
+Produto: ${v.produto?.nome ?? "Não informado"}
+Loja: ${v.loja?.nome ?? "Não informada"}
+Quantidade: ${v.quantidade}
+Data: ${formatarData(v.dataVenda || v.dataCriacao)}
+----------------------------------------------------------\n`;
+  });
+
+  gerarPDF("Relatorio_Vendas.pdf", texto);
 }

@@ -71,7 +71,7 @@ body {
 /* Área de gestão inferior (Tabelas de relatórios) */
 #areaGestao {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 24px;
   margin-top: 32px;
 }

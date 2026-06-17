@@ -110,6 +110,28 @@
 
             <!-- ÁREA DE GESTÃO -->
             <section id="areaGestao">
+                <!-- VENDAS -->
+                <section class="card">
+                    <div class="cabecalho-relatorio">
+                        <h2>Histórico de Vendas</h2>
+                        <button onclick="gerarRelatorioVendas()">
+                            📄 Gerar Relatório
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Loja</th>
+                                    <th>Quantidade</th>
+                                    <th>Data/Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaVendas"></tbody>
+                        </table>
+                    </div>
+                </section>
 
                 <!-- TRANSFERÊNCIAS -->
                 <section class="card">
