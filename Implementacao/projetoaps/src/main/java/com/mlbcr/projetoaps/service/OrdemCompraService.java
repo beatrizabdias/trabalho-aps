@@ -13,13 +13,16 @@ public class OrdemCompraService {
 
     private final OrdemCompraRepository ordemCompraRepository;
     private final EstoqueRepository estoqueRepository;
+    private final StateService stateService;
 
     public OrdemCompraService(
-            OrdemCompraRepository ordemCompraRepository,
-            EstoqueRepository estoqueRepository) {
+        OrdemCompraRepository ordemCompraRepository,
+        EstoqueRepository estoqueRepository,
+        StateService stateService) {
 
         this.ordemCompraRepository = ordemCompraRepository;
         this.estoqueRepository = estoqueRepository;
+        this.stateService = stateService;
     }
 
     @Transactional
@@ -41,6 +44,11 @@ public class OrdemCompraService {
 
         estoque.setQuantidade(
                 estoque.getQuantidade() + ordemCompra.getQuantidade()
+        );
+
+        stateService.atualizarEstado(
+                ordemCompra.getProduto(),
+                estoque
         );
 
         estoqueRepository.save(estoque);

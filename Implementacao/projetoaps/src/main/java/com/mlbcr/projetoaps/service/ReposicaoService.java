@@ -1,6 +1,7 @@
 package com.mlbcr.projetoaps.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +17,7 @@ import com.mlbcr.projetoaps.repository.EstoqueRepository;
 import com.mlbcr.projetoaps.repository.LojaRepository;
 import com.mlbcr.projetoaps.repository.OrdemCompraRepository;
 import com.mlbcr.projetoaps.repository.TransferenciaRepository;
-import com.mlbcr.projetoaps.strategy.CompraStrategy;
+import com.mlbcr.projetoaps.strategy.PrioridadeStrategy;
 import com.mlbcr.projetoaps.strategy.TransferenciaStrategy;
 
 @Service
@@ -29,77 +30,96 @@ public class ReposicaoService {
     private final ReposicaoNotificar reposicaoAcaoNotifier;
 
     private final TransferenciaStrategy transferenciaStrategy;
-    private final CompraStrategy compraStrategy;
+    private final PrioridadeStrategy prioridadeStrategy;
+
+    private final StateService stateService;
 
     private static final int QTD_TRANSFERENCIA = 15;
-    private static final int QTD_COMPRA = 30;
 
     public ReposicaoService(
             EstoqueRepository estoqueRepository,
             TransferenciaRepository transferenciaRepository,
             OrdemCompraRepository ordemCompraRepository,
-            LojaRepository lojaRepository,    
+            LojaRepository lojaRepository,
             TransferenciaStrategy transferenciaStrategy,
-            CompraStrategy compraStrategy,
-            ReposicaoNotificar reposicaoAcaoNotifier) {
+            PrioridadeStrategy prioridadeStrategy,
+            ReposicaoNotificar reposicaoAcaoNotifier,
+            StateService stateService) {
 
         this.estoqueRepository = estoqueRepository;
         this.transferenciaRepository = transferenciaRepository;
         this.ordemCompraRepository = ordemCompraRepository;
         this.lojaRepository = lojaRepository;
         this.transferenciaStrategy = transferenciaStrategy;
-        this.compraStrategy = compraStrategy;
+        this.prioridadeStrategy = prioridadeStrategy;
         this.reposicaoAcaoNotifier = reposicaoAcaoNotifier;
+        this.stateService = stateService;
     } 
-
-    private int obterLimiteMinimo(Loja loja) {
-        if (loja != null && "Méier".equalsIgnoreCase(loja.getNome())) {
-            return 20; // Margem de segurança maior para o Méier não esgotar
-        }
-        return 10; // Padrão para as outras lojas
-    }
 
     public void analisarReposicao(Produto produto, Loja loja) {
         Estoque estoqueAtual = estoqueRepository
             .findByProdutoAndLoja(produto, loja)
             .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
 
-        int limiteCritico = obterLimiteMinimo(loja);
+        int limiteCritico = prioridadeStrategy.obterQuantidadeMinima(estoqueAtual);
         if (estoqueAtual.getQuantidade() >= limiteCritico) {
             return;
         }
 
-        Loja outraLoja = lojaRepository.findAll()
+        List<Loja> outrasLojas = lojaRepository.findAll()
                 .stream()
                 .filter(l -> !l.getId().equals(loja.getId()))
-                .findFirst()
-                .orElse(null);
+                .toList();
 
-        if (outraLoja == null) {
-            gerarOrdemCompra(produto, loja);
+        Estoque melhorEstoqueOrigem = null;
+        Loja melhorLojaOrigem = null;
+        int maiorSaldoDisponivel = 0;
+
+        for (Loja outraLoja : outrasLojas) {
+            Estoque estoqueOutraLoja = estoqueRepository
+                    .findByProdutoAndLoja(produto, outraLoja)
+                    .orElse(null);
+
+            if (estoqueOutraLoja == null) {
+                continue;
+            }
+
+            int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoqueOutraLoja);
+            int saldoDisponivel = estoqueOutraLoja.getQuantidade() - limiteOrigem;
+
+            if (saldoDisponivel > maiorSaldoDisponivel) {
+                maiorSaldoDisponivel = saldoDisponivel;
+                melhorLojaOrigem = outraLoja;
+                melhorEstoqueOrigem = estoqueOutraLoja;
+            }
+        }
+
+        if (melhorEstoqueOrigem != null && transferenciaStrategy.podeAplicar(melhorEstoqueOrigem)) {
+            realizarTransferencia(produto, loja, melhorLojaOrigem, estoqueAtual, melhorEstoqueOrigem);
             return;
         }
 
-        Estoque estoqueOutraLoja = estoqueRepository
-                .findByProdutoAndLoja(produto, outraLoja)
-                .orElse(null);
-
-        if (transferenciaStrategy.podeAplicar(estoqueOutraLoja)) {
-            realizarTransferencia(produto, loja, outraLoja, estoqueAtual, estoqueOutraLoja);
-            return;
-        }
-
-        if (compraStrategy.podeAplicar(estoqueOutraLoja)) {
-            gerarOrdemCompra(produto, loja);
-        }
+        int quantidadeCompra = prioridadeStrategy.obterQuantidadeLoteCompra(estoqueAtual);
+        gerarOrdemCompra(produto, loja, quantidadeCompra);
     }
 
     private void realizarTransferencia(
             Produto produto, Loja lojaDestino, Loja lojaOrigem,
             Estoque estoqueDestino, Estoque estoqueOrigem) {
 
-        estoqueDestino.setQuantidade(estoqueDestino.getQuantidade() + QTD_TRANSFERENCIA);
-        estoqueOrigem.setQuantidade(estoqueOrigem.getQuantidade() - QTD_TRANSFERENCIA);
+        int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoqueOrigem);
+        int maxTransferivel = estoqueOrigem.getQuantidade() - limiteOrigem;
+        int quantidadeTransferencia = Math.min(QTD_TRANSFERENCIA, Math.max(maxTransferivel, 0));
+
+        if (quantidadeTransferencia <= 0) {
+            return;
+        }
+
+        estoqueDestino.setQuantidade(estoqueDestino.getQuantidade() + quantidadeTransferencia);
+        estoqueOrigem.setQuantidade(estoqueOrigem.getQuantidade() - quantidadeTransferencia);
+
+        stateService.atualizarEstado(produto, estoqueDestino);
+        stateService.atualizarEstado(produto, estoqueOrigem);
 
         estoqueRepository.save(estoqueDestino);
         estoqueRepository.save(estoqueOrigem);
@@ -108,44 +128,79 @@ public class ReposicaoService {
         transferencia.setProduto(produto);
         transferencia.setLojaOrigem(lojaOrigem);
         transferencia.setLojaDestino(lojaDestino);
-        transferencia.setQuantidade(QTD_TRANSFERENCIA);
+        transferencia.setQuantidade(quantidadeTransferencia);
         transferencia.setDataTransferencia(LocalDateTime.now());
 
         transferenciaRepository.save(transferencia);
     }
 
     @Transactional
-    protected void gerarOrdemCompra(Produto produto, Loja loja) {
+    protected void gerarOrdemCompra(Produto produto, Loja loja, int quantidade) {
         OrdemCompra ordemCompra = new OrdemCompra();
         ordemCompra.setProduto(produto);
         ordemCompra.setFornecedor(produto.getFornecedor());
         ordemCompra.setLoja(loja);
-        ordemCompra.setQuantidade(QTD_COMPRA);
+        ordemCompra.setQuantidade(quantidade);
         ordemCompra.setDataCriacao(LocalDateTime.now());
         ordemCompra.setStatus("PENDENTE");
 
         OrdemCompra ordemSalva = ordemCompraRepository.save(ordemCompra);
 
-        Estoque estoque = estoqueRepository
-            .findByProdutoAndLoja(produto, loja)
-            .orElseThrow(() -> new RuntimeException("Estoque não encontrado"));
+        new Thread(() -> processarCompra(ordemSalva.getId())).start();
+    }
 
-        estoque.setQuantidade(
-            estoque.getQuantidade() + QTD_COMPRA
+    @Transactional
+    protected void gerarOrdemCompra(Produto produto, Loja loja) {
+        int quantidadeCompra = prioridadeStrategy.obterQuantidadeLoteCompra(
+            estoqueRepository.findByProdutoAndLoja(produto, loja)
+                .orElseThrow(() -> new RuntimeException("Estoque não encontrado"))
         );
+        gerarOrdemCompra(produto, loja, quantidadeCompra);
+    }
 
-        estoqueRepository.save(estoque);
+    private void processarCompra(Long ordemId) {
+        try {
 
-        ordemSalva.setStatus("CONCLUIDA");
-        ordemCompraRepository.save(ordemSalva);
+            Thread.sleep(3000);
 
-        String descricao = String.format(
-            "Ordem de compra gerada e concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
-            loja.getId(),
-            QTD_COMPRA
-        );
+            OrdemCompra ordem = ordemCompraRepository.findById(ordemId)
+                    .orElseThrow();
 
-        ReposicaoEvent event = new ReposicaoEvent(ordemSalva, descricao);
-        reposicaoAcaoNotifier.notificar(event);
+            ordem.setStatus("EM_PROCESSAMENTO");
+            ordemCompraRepository.save(ordem);
+
+            Thread.sleep(3000);
+
+            Estoque estoque = estoqueRepository
+                    .findByProdutoAndLoja(
+                            ordem.getProduto(),
+                            ordem.getLoja())
+                    .orElseThrow();
+
+            estoque.setQuantidade(
+                    estoque.getQuantidade() + ordem.getQuantidade());
+
+            stateService.atualizarEstado(ordem.getProduto(), estoque);
+
+            estoqueRepository.save(estoque);
+
+            ordem.setStatus("CONCLUIDA");
+            OrdemCompra ordemConcluida = ordemCompraRepository.save(ordem);
+
+            String descricao = String.format(
+                "Ordem de compra concluída automaticamente para a Loja ID %d. Qtd comprada: %d",
+                ordemConcluida.getLoja().getId(),
+                ordemConcluida.getQuantidade()
+            );
+
+            ReposicaoEvent event = new ReposicaoEvent(ordemConcluida, descricao);
+            reposicaoAcaoNotifier.notificar(event);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("ReposicaoService interrompido: " + e.getMessage());
+        } catch (RuntimeException e) {
+            System.err.println("Erro ao processar ordem de compra: " + e.getMessage());
+        }
     }
 }

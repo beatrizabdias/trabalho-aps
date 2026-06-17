@@ -7,12 +7,20 @@ import com.mlbcr.projetoaps.model.Estoque;
 @Component
 public class TransferenciaStrategy implements ReposicaoStrategy {
 
-    private static final int ESTOQUE_TRANSFERENCIA = 25;
+    private static final int QUANTIDADE_TRANSFERENCIA = 15;
+    private final PrioridadeStrategy prioridadeStrategy;
+
+    public TransferenciaStrategy(PrioridadeStrategy prioridadeStrategy) {
+        this.prioridadeStrategy = prioridadeStrategy;
+    }
 
     @Override
     public boolean podeAplicar(Estoque estoque) {
+        if (estoque == null) {
+            return false;
+        }
 
-        return estoque != null
-                && estoque.getQuantidade() > ESTOQUE_TRANSFERENCIA;
+        int limiteOrigem = prioridadeStrategy.obterQuantidadeMinima(estoque);
+        return estoque.getQuantidade() - limiteOrigem >= QUANTIDADE_TRANSFERENCIA;
     }
 }

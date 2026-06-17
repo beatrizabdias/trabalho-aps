@@ -29,7 +29,13 @@ async function fazerLogin() {
     `${usuarioLogado.nome} | ${usuarioLogado.email} | ${usuarioLogado.loja?.nome ?? "Sem loja"}`;
 
   aplicarPermissoes();
-  carregarTudo();
+  await carregarTudo();
+
+  setInterval(() => {
+    if (usuarioLogado) {
+      carregarDadosDinamicos();
+    }
+  }, 2000);
 }
 
 function aplicarPermissoes() {
@@ -108,7 +114,7 @@ async function registrarVenda() {
 
   if (resposta.ok) {
     alert("Venda registrada com sucesso!");
-    carregarTudo();
+    await carregarTudo();
   } else {
     alert("Erro ao registrar venda.");
   }
@@ -145,7 +151,7 @@ function formatarEstado(estado) {
   // Remove acentos e converte para maiúsculas para comparar
   const e = estado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  if (e.includes("DISPONIVEL")) return "🟢 Disponível";
+  if (e.includes("NORMAL")) return "🟢 Normal";
   if (e.includes("ALERTA")) return "🟡 Alerta";
   if (e.includes("CRITICO")) return "🔴 Crítico";
   if (e.includes("ESGOTADO")) return "⚫ Esgotado";
@@ -195,11 +201,7 @@ async function carregarTransferencias() {
     tabela.innerHTML += `
       <tr>
         <td>${t.produto.nome}</td>
-        <td>${t.produto.codigo || "-"}</td>
-        <td>${t.produto.categoria || "-"}</td>
-        <td>${t.produto.fornecedor?.razaoSocial || "-"}</td>
-        <td>${t.lojaOrigem.nome}</td>
-        <td>${t.lojaDestino.nome}</td>
+        <td>${t.lojaOrigem.nome} -> ${t.lojaDestino.nome}</td>
         <td>${t.quantidade}</td>
         <td>${formatarData(t.dataTransferencia)}</td>
       </tr>
@@ -210,16 +212,13 @@ async function carregarTransferencias() {
 async function carregarOrdensCompra() {
   const resposta = await fetch("/ordens-compra");
   const ordens = await resposta.json();
-  console.log(ordens);
 
   const tabela = document.getElementById("tabelaOrdens");
   tabela.innerHTML = "";
 
   ordens.forEach(o => {
     const data = new Date(o.dataCriacao);
-    console.log(data)
     const dataFormatada = formatarData(data);
-    console.log(dataFormatada)
 
     tabela.innerHTML += `
       <tr>
@@ -234,11 +233,11 @@ async function carregarOrdensCompra() {
   });
 }
 
-function carregarTudo() {
+async function carregarTudo() {
   // Dados comuns a todos
-  carregarProdutos();
-  carregarLojas();
-  carregarEstoques();
+  await carregarProdutos();
+  await carregarLojas();
+  await carregarEstoques();
 
   // Verifica o tipo de usuário para carregar dados sensíveis
   const tipo = usuarioLogado?.tipoFuncionario || usuarioLogado?.tipo_funcionario;
@@ -247,302 +246,23 @@ function carregarTudo() {
   const areaGestao = document.getElementById("areaGestao");
 
   if (tipo === "GERENTE" || tipo === "ADMIN") {
-  areaGestao.style.display = "block";
-  carregarTransferencias();
-  carregarOrdensCompra();
+    areaGestao.style.display = "block";
+    await carregarTransferencias();
+    await carregarOrdensCompra();
   } else {
     areaGestao.style.display = "none";
   }
 }
 
-function baixarArquivo(nomeArquivo, conteudo) {
+async function carregarDadosDinamicos() {
+    await carregarEstoques();
 
-  const blob = new Blob(
-    [conteudo],
-    { type: "text/plain" }
-  );
+    const tipo =
+        usuarioLogado?.tipoFuncionario ||
+        usuarioLogado?.tipo_funcionario;
 
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(blob);
-  link.download = nomeArquivo;
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-async function gerarRelatorioTransferencias() {
-
-  const resposta = await fetch("/transferencias");
-  let transferencias = await resposta.json();
-
-  const tipo =
-    usuarioLogado.tipoFuncionario ||
-    usuarioLogado.tipo_funcionario;
-
-  if (
-    tipo === "GERENTE" &&
-    usuarioLogado.loja
-  ) {
-
-    transferencias = transferencias.filter(
-      t =>
-        t.lojaOrigem.id === usuarioLogado.loja.id ||
-        t.lojaDestino.id === usuarioLogado.loja.id
-    );
-  }
-
-  let totalItens = 0;
-
-  const produtos = {};
-
-  transferencias.forEach(t => {
-
-    totalItens += t.quantidade;
-
-    if (!produtos[t.produto.nome]) {
-      produtos[t.produto.nome] = 0;
+    if (tipo === "GERENTE" || tipo === "ADMIN") {
+        await carregarTransferencias();
+        await carregarOrdensCompra();
     }
-
-    produtos[t.produto.nome] += t.quantidade;
-  });
-
-  let produtoMaisTransferido = "Nenhum";
-  let maiorQuantidade = 0;
-
-  for (const produto in produtos) {
-
-    if (produtos[produto] > maiorQuantidade) {
-
-      maiorQuantidade = produtos[produto];
-      produtoMaisTransferido = produto;
-    }
-  }
-
-  let texto = `
-==========================================================
-MERCADO CARIOCADA
-RELATÓRIO DE TRANSFERÊNCIAS
-==========================================================
-
-Data de Geração:
-${new Date().toLocaleString("pt-BR")}
-
-Gerado por:
-${usuarioLogado.nome}
-
-Perfil:
-${tipo}
-
-Loja:
-${usuarioLogado.loja?.nome || "Todas"}
-
-----------------------------------------------------------
-
-Total de Transferências:
-${transferencias.length}
-
-Total de Itens Movimentados:
-${totalItens}
-
-Produto Mais Transferido:
-${produtoMaisTransferido}
-
-Quantidade Movimentada:
-${maiorQuantidade}
-
-==========================================================
-DETALHAMENTO
-==========================================================
-
-`;
-
-  transferencias.forEach(t => {
-
-    texto += `
-Produto: ${t.produto.nome}
-
-Origem: ${t.lojaOrigem.nome}
-
-Destino: ${t.lojaDestino.nome}
-
-Quantidade: ${t.quantidade}
-
-Data: ${formatarData(t.dataTransferencia)}
-
-----------------------------------------------------------
-`;
-  });
-
-
-gerarPDF(
-  "Relatorio_Transferencias.pdf",
-  texto
-);
-}
-
-async function gerarRelatorioCompras() {
-
-  const resposta =
-    await fetch("/ordens-compra");
-
-  let ordens =
-    await resposta.json();
-
-  const tipo =
-    usuarioLogado.tipoFuncionario ||
-    usuarioLogado.tipo_funcionario;
-
-  if (
-    tipo === "GERENTE" &&
-    usuarioLogado.loja
-  ) {
-
-    ordens = ordens.filter(
-      o =>
-        o.loja.id === usuarioLogado.loja.id
-    );
-  }
-
-  let totalItens = 0;
-  let valorTotal = 0;
-
-  const fornecedores = {};
-  const produtos = {};
-
-  ordens.forEach(o => {
-
-    totalItens += o.quantidade;
-
-    if (o.produto.valorCompra) {
-
-      valorTotal +=
-        o.quantidade *
-        o.produto.valorCompra;
-    }
-
-    if (o.fornecedor) {
-
-      if (!fornecedores[o.fornecedor.razaoSocial]) {
-
-        fornecedores[o.fornecedor.razaoSocial] = 0;
-      }
-
-      fornecedores[o.fornecedor.razaoSocial] +=
-        o.quantidade;
-    }
-
-    if (!produtos[o.produto.nome]) {
-
-      produtos[o.produto.nome] = 0;
-    }
-
-    produtos[o.produto.nome] += o.quantidade;
-  });
-
-  let texto = `
-==========================================================
-MERCADO CARIOCADA
-RELATÓRIO DE ORDENS DE COMPRA
-==========================================================
-
-Data de Geração:
-${new Date().toLocaleString("pt-BR")}
-
-Gerado por:
-${usuarioLogado.nome}
-
-Perfil:
-${tipo}
-
-Loja:
-${usuarioLogado.loja?.nome || "Todas"}
-
-----------------------------------------------------------
-
-Total de Ordens:
-${ordens.length}
-
-Quantidade Total Comprada:
-${totalItens}
-
-Valor Estimado Comprado:
-R$ ${valorTotal.toFixed(2)}
-
-==========================================================
-FORNECEDORES
-==========================================================
-
-`;
-
-  for (const fornecedor in fornecedores) {
-
-    texto += `
-${fornecedor}
-Quantidade Fornecida: ${fornecedores[fornecedor]}
-
-`;
-  }
-
-  texto += `
-==========================================================
-DETALHAMENTO DAS ORDENS
-==========================================================
-
-`;
-
-  ordens.forEach(o => {
-
-    texto += `
-Produto: ${o.produto.nome}
-
-Fornecedor:
-${o.fornecedor
-  ? o.fornecedor.razaoSocial
-  : "Não informado"}
-
-Quantidade:
-${o.quantidade}
-
-Valor Unitário:
-R$ ${o.produto.valorCompra}
-
-Valor Total:
-R$ ${(o.quantidade * o.produto.valorCompra).toFixed(2)}
-
-Status:
-${o.status}
-
-Loja:
-${o.loja.nome}
-
-Data:
-${formatarData(o.dataCriacao)}
-
-----------------------------------------------------------
-`;
-  });
-
-gerarPDF(
-  "Relatorio_Compras.pdf",
-  texto
-);
-}
-
-function gerarPDF(nomeArquivo, texto) {
-
-  const { jsPDF } = window.jspdf;
-
-  const doc = new jsPDF();
-
-  doc.setFont("courier", "normal");
-  doc.setFontSize(10);
-
-  const linhas =
-    doc.splitTextToSize(texto, 180);
-
-  doc.text(linhas, 10, 10);
-
-  doc.save(nomeArquivo);
 }
