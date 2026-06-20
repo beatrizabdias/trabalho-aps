@@ -1,40 +1,19 @@
 package com.mlbcr.projetoaps.service;
 
-import java.time.LocalDateTime;
+import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import com.mlbcr.projetoaps.dto.ReposicaoRespostaDTO;
 import com.mlbcr.projetoaps.dto.VendaRespostaDTO;
-import com.mlbcr.projetoaps.model.Estoque;
-import com.mlbcr.projetoaps.model.Loja;
-import com.mlbcr.projetoaps.model.Produto;
-import com.mlbcr.projetoaps.model.Venda;
-import com.mlbcr.projetoaps.repository.EstoqueRepository;
-import com.mlbcr.projetoaps.repository.LojaRepository;
-import com.mlbcr.projetoaps.repository.ProdutoRepository;
-import com.mlbcr.projetoaps.repository.VendaRepository;
+import com.mlbcr.projetoaps.especialista.LojaEspecialista;
 
 @Service
 public class VendaService {
-    private final VendaRepository vendaRepository;
-    private final EstoqueRepository estoqueRepository;
-    private final ProdutoRepository produtoRepository;
-    private final LojaRepository lojaRepository;
-    private final ReposicaoService reposicaoService;
-    private final StateService stateService;
 
-    public VendaService(VendaRepository vendaRepository, EstoqueRepository estoqueRepository,
-            ProdutoRepository produtoRepository, LojaRepository lojaRepository, ReposicaoService reposicaoService,
-            StateService stateService) {
-        this.vendaRepository = vendaRepository;
-        this.estoqueRepository = estoqueRepository;
-        this.produtoRepository = produtoRepository;
-        this.lojaRepository = lojaRepository;
-        this.reposicaoService = reposicaoService;
-        this.stateService = stateService;
+    private final List<LojaEspecialista> especialistas;
+
+    public VendaService(List<LojaEspecialista> especialistas) {
+        this.especialistas = especialistas;
     }
 
     public VendaRespostaDTO registrarVenda(
