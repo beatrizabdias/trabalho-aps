@@ -104,7 +104,7 @@ public class VendaService {
         }
 
         String mensagem = diagnostico.tipo().equalsIgnoreCase("SEM_ACAO")
-                ? "Venda registrada. Estoque permanece em zona de conforto."
+                ? "Venda registrada."
                 : "Venda registrada. Estoque entrou em análise de reposição automática.";
 
         return new VendaRespostaDTO(
